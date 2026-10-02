@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f4f1;
+  --foreground: #111827;
 }
 
 @theme inline {
@@ -10,17 +10,37 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: #15803d;
+  --color-primary-dark: #14532d;
+  --color-primary-light: #dcfce7;
+  --color-surface: #ffffff;
+  --color-border: #d1d5db;
+  --color-danger: #b91c1c;
+  --color-danger-light: #fee2e2;
+  --color-warning: #b45309;
+  --color-warning-light: #fef3c7;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Outdoor legibility: enforce a minimum comfortable tap target everywhere
+   an operator interacts, per the mesa de control's one-thumb requirement. */
+button,
+input,
+select,
+textarea,
+a[role="button"] {
+  min-height: 44px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 0;
+  width: 20px;
+  height: 20px;
 }
