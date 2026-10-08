@@ -72,7 +72,7 @@ export default function EquiposPage() {
                 className={claseCampo}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                placeholder="Ej. Real Tlahuelilpan FC"
+                placeholder="Ej. Real Tulancingo FC"
               />
             </Campo>
             <Campo etiqueta="Categoría">
@@ -101,7 +101,7 @@ export default function EquiposPage() {
                   className={claseCampo}
                   value={delegadoTelefono}
                   onChange={(e) => setDelegadoTelefono(e.target.value)}
-                  placeholder="771 123 4567"
+                  placeholder="775 123 4567"
                 />
               </Campo>
             </div>

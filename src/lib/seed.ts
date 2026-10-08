@@ -201,7 +201,7 @@ export function crearEstadoInicial(
 
   const liga: Liga = {
     id: ids.liga(),
-    nombre: "Liga Municipal de Tlahuelilpan",
+    nombre: "Liga Municipal de Tulancingo",
     temporadaActivaId: "",
   };
 
@@ -236,45 +236,45 @@ export function crearEstadoInicial(
 
   const categorias: Categoria[] = [categoriaLibre, categoriaJuvenil];
 
-  const equipoRealTlahuelilpan: Equipo = {
+  const equipoRealTulancingo: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
-    nombre: "Real Tlahuelilpan FC",
-    delegado: { nombre: "Javier Hernández Soto", telefono: "771 123 4567" },
+    nombre: "Real Tulancingo FC",
+    delegado: { nombre: "Javier Hernández Soto", telefono: "775 123 4567" },
   };
   const equipoCuauhtemoc: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
     nombre: "Deportivo Cuauhtémoc",
-    delegado: { nombre: "Miguel Ángel Reyes Cruz", telefono: "771 234 5678" },
+    delegado: { nombre: "Miguel Ángel Reyes Cruz", telefono: "775 234 5678" },
   };
   const equipoAtleticoMinero: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
     nombre: "Atlético Minero",
-    delegado: { nombre: "Roberto Carlos Mendoza", telefono: "772 345 6789" },
+    delegado: { nombre: "Roberto Carlos Mendoza", telefono: "775 345 6789" },
   };
   const equipoHalcones: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
-    nombre: "Halcones de Tlahuelilpan",
-    delegado: { nombre: "Laura Patricia Gómez", telefono: "771 456 7890" },
+    nombre: "Halcones de Tulancingo",
+    delegado: { nombre: "Laura Patricia Gómez", telefono: "775 456 7890" },
   };
   const equipoTigres: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
     nombre: "Tigres del Valle",
-    delegado: { nombre: "Fernando Islas Ramírez", telefono: "771 567 8901" },
+    delegado: { nombre: "Fernando Islas Ramírez", telefono: "775 567 8901" },
   };
   const equipoAguilas: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
     nombre: "Águilas Doradas",
-    delegado: { nombre: "Sandra Luz Martínez", telefono: "772 678 9012" },
+    delegado: { nombre: "Sandra Luz Martínez", telefono: "775 678 9012" },
   };
 
   const equipos: Equipo[] = [
-    equipoRealTlahuelilpan,
+    equipoRealTulancingo,
     equipoCuauhtemoc,
     equipoAtleticoMinero,
     equipoHalcones,
@@ -289,7 +289,7 @@ export function crearEstadoInicial(
   const jugadores: Jugador[] = [];
 
   const equiposLibre: Array<[Equipo, number]> = [
-    [equipoRealTlahuelilpan, 1],
+    [equipoRealTulancingo, 1],
     [equipoCuauhtemoc, 2],
     [equipoAtleticoMinero, 3],
   ];
@@ -329,14 +329,14 @@ export function crearEstadoInicial(
 
   // --- Calendar: single round-robin per category ----------------------------
   const sedes = [
-    "Unidad Deportiva Tlahuelilpan",
+    "Unidad Deportiva Tulancingo",
     "Campo Municipal No. 2",
     "Cancha Ejido La Providencia",
   ];
 
   const partidosLibre = generarCalendarioRoundRobin({
     categoriaId: categoriaLibre.id,
-    equipoIds: [equipoRealTlahuelilpan.id, equipoCuauhtemoc.id, equipoAtleticoMinero.id],
+    equipoIds: [equipoRealTulancingo.id, equipoCuauhtemoc.id, equipoAtleticoMinero.id],
     fechaInicio: fechaJornada1,
     diasEntreJornadas: 14,
     horaDefault: "17:00",

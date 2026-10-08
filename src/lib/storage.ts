@@ -7,7 +7,7 @@ const STORAGE_KEY = "liga-simulador:estado";
  * state with a different version is discarded and the app starts from the
  * fresh seed instead of loading data it no longer understands.
  */
-export const VERSION_ESQUEMA = 2;
+export const VERSION_ESQUEMA = 3;
 
 interface EstadoGuardado {
   version: number;

@@ -11,8 +11,9 @@ antes de escribir una sola línea de código de producción.
   jugadores, cierre de registro (con ventana de altas extemporáneas),
   calendario, captura de partido (mesa de control), tabla de
   posiciones/estadísticas, vista pública y bitácora de auditoría.
-- Datos de ejemplo realistas (una liga municipal ficticia, "Liga Municipal
-  de Tlahuelilpan") con 6 equipos, 72 jugadores, un calendario generado y
+- Datos de ejemplo realistas para el cliente del proyecto, el **Municipio
+  de Tulancingo** ("Liga Municipal de Tulancingo"; equipos, delegados y
+  jugadores ficticios) con 6 equipos, 72 jugadores, un calendario generado y
   la Jornada 1 de cada categoría ya jugada. **Las fechas se calculan a
   partir del día en que se abre el prototipo:** la Jornada 1 se jugó hace
   dos semanas y la **Jornada 2 está programada para hoy**.
@@ -49,12 +50,20 @@ antes de escribir una sola línea de código de producción.
 
 ## Cómo ejecutarlo
 
-Requiere Node.js 20 o superior.
+Requiere Node.js 20 o superior. El proyecto usa **npm** (tiene
+`package-lock.json`); no lo mezcles con pnpm ni yarn.
 
 ```bash
 npm install
+```
+
+```bash
 npm run dev
 ```
+
+Si la instalación quedó a medias o se usó otro gestor de paquetes (error
+`Cannot find module ...node_modules\next\dist\bin\next`), borra la carpeta
+`node_modules` y reinstala con `npm ci`.
 
 Abre [http://localhost:3000](http://localhost:3000). La app arranca con los
 datos de ejemplo precargados. Usa el botón **"Reiniciar simulación"** (en el
@@ -116,7 +125,7 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
    Jornada 1 ya se jugó y la Jornada 2 tiene la insignia **Hoy**.
 
 7. **Captura del partido — mesa de control** (`/partidos` → *Libre,
-   Jornada 2: Real Tlahuelilpan FC vs Atlético Minero*). Este es el
+   Jornada 2: Real Tulancingo FC vs Atlético Minero*). Este es el
    corazón de la demo:
    - **Convocatoria.** En Atlético Minero, el #7 aparece **suspendido**
      (tarjeta roja en la Jornada 1) y el #5 **no convocable** (revisión
@@ -168,7 +177,8 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
 ## Decisiones de este ciclo
 
 - **Elegibilidad por año de nacimiento** (no por fecha exacta): se mantiene
-  hasta confirmarlo con el reglamento del área municipal de deportes.
+  hasta confirmarlo con el reglamento del área de deportes del Municipio de
+  Tulancingo.
 - **Operación sin conexión (RNF-01/RNF-02):** se mantiene como simulación;
   la versión real (service worker, IndexedDB, `navigator.onLine`) queda
   para un ciclo posterior.

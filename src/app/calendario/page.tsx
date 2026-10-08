@@ -15,7 +15,7 @@ import { ICONO_SECCION } from "@/components/iconosSeccion";
 import TarjetaPartido from "@/components/partidos/TarjetaPartido";
 
 const SEDES = [
-  "Unidad Deportiva Tlahuelilpan",
+  "Unidad Deportiva Tulancingo",
   "Campo Municipal No. 2",
   "Cancha Ejido La Providencia",
 ];
