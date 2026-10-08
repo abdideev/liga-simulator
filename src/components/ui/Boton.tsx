@@ -1,26 +1,33 @@
 "use client";
 
-import type { ButtonHTMLAttributes } from "react";
+import { motion, type HTMLMotionProps } from "motion/react";
 
-type Variante = "primario" | "secundario" | "peligro" | "fantasma";
+import { CLASES_INTENCION, type EstiloVariante, type Intencion } from "./estilos";
+import { PULSAR, RESORTE, SOBRE_BOTON } from "./movimiento";
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variante?: Variante;
+interface Props extends HTMLMotionProps<"button"> {
+  intencion?: Intencion;
+  variante?: EstiloVariante;
 }
 
-const CLASES_VARIANTE: Record<Variante, string> = {
-  primario: "bg-(--color-primary) text-white hover:bg-(--color-primary-dark) disabled:bg-gray-300",
-  secundario:
-    "border border-(--color-border) bg-white text-gray-800 hover:bg-gray-50 disabled:text-gray-400",
-  peligro: "bg-(--color-danger) text-white hover:bg-red-800 disabled:bg-gray-300",
-  fantasma: "text-gray-700 hover:bg-gray-100 disabled:text-gray-400",
-};
-
-export default function Boton({ variante = "primario", className = "", ...props }: Props) {
+/** Pill button that scales up on hover and springs down when pressed. */
+export default function Boton({
+  intencion = "accent",
+  variante = "solido",
+  className = "",
+  type = "button",
+  disabled,
+  ...props
+}: Props) {
   return (
-    <button
+    <motion.button
+      type={type}
+      disabled={disabled}
+      whileHover={disabled ? undefined : SOBRE_BOTON}
+      whileTap={disabled ? undefined : PULSAR}
+      transition={RESORTE}
       {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${CLASES_VARIANTE[variante]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,opacity] duration-150 disabled:pointer-events-none disabled:opacity-45 ${CLASES_INTENCION[intencion][variante]} ${className}`}
     />
   );
 }

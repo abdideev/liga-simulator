@@ -3,13 +3,11 @@
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 
+import Cargando from "./ui/Cargando";
+
 const InnerApp = dynamic(() => import("./InnerApp"), {
   ssr: false,
-  loading: () => (
-    <div className="flex min-h-screen items-center justify-center text-gray-500">
-      Cargando simulador…
-    </div>
-  ),
+  loading: () => <Cargando />,
 });
 
 export default function AppShell({ children }: { children: ReactNode }) {

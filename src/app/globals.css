@@ -1,46 +1,154 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f3f4f1;
-  --foreground: #111827;
-}
-
+/*
+ * Sistema de diseño — moderno y limpio, inspirado en HeroUI v3: lienzo gris
+ * muy claro, superficies blancas con esquinas amplias y sombras difusas,
+ * controles en forma de píldora y campos rellenos sin bordes duros.
+ *
+ * Paleta base definida por el equipo; los tonos "-soft" (fondos suaves) y
+ * "-ink" (texto sobre fondo claro) se derivan de ella para que los colores
+ * vibrantes mantengan contraste legible en exteriores (RNF-04).
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --color-primary: #15803d;
-  --color-primary-dark: #14532d;
-  --color-primary-light: #dcfce7;
-  --color-surface: #ffffff;
-  --color-border: #d1d5db;
-  --color-danger: #b91c1c;
-  --color-danger-light: #fee2e2;
-  --color-warning: #b45309;
-  --color-warning-light: #fef3c7;
+  /* Paleta base */
+  --color-paper: #ffffff;
+  --color-surface: #f9fafb;
+  --color-accent: #007bff;
+  --color-ok: #28a745;
+  --color-warn: #fbc37c;
+  --color-danger: #f31260;
+  --color-ink: #11181c;
+  --color-border: #e4e4e0;
+
+  /* Derivados */
+  --color-canvas: #f4f4f5; /* lienzo de la app y campos rellenos */
+  --color-control: #ebebec; /* controles neutros, pistas de pestañas e interruptores */
+  --color-muted: #687076;
+  --color-accent-ink: #0062cc;
+  --color-accent-soft: #e6f1ff;
+  --color-ok-ink: #1e7b34;
+  --color-ok-soft: #e9f6ec;
+  --color-warn-ink: #8a5300;
+  --color-warn-soft: #fff4e5;
+  --color-danger-ink: #c20e4d;
+  --color-danger-soft: #fee7ef;
+
+  /* Elevación difusa (sin bordes) */
+  --shadow-suave: 0 1px 2px rgb(17 24 28 / 0.04), 0 4px 16px rgb(17 24 28 / 0.05);
+  --shadow-control: 0 1px 2px rgb(17 24 28 / 0.06), 0 1px 3px rgb(17 24 28 / 0.08);
+  --shadow-elevada: 0 2px 6px rgb(17 24 28 / 0.06), 0 12px 32px rgb(17 24 28 / 0.08);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
 }
 
 /* Outdoor legibility: enforce a minimum comfortable tap target everywhere
-   an operator interacts, per the mesa de control's one-thumb requirement. */
-button,
-input,
-select,
-textarea,
-a[role="button"] {
-  min-height: 44px;
+   an operator interacts, per the mesa de control's one-thumb requirement.
+   In the base layer so a component can still opt into a compact size. */
+@layer base {
+  button,
+  input,
+  select,
+  textarea,
+  a[role="button"] {
+    min-height: 44px;
+  }
 }
 
-input[type="checkbox"],
+/* --- Casillas (estilo HeroUI) ------------------------------------------- */
+input[type="checkbox"]:not([role="switch"]) {
+  appearance: none;
+  min-height: 0;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-content: center;
+  border-radius: 7px;
+  border: 2px solid #d4d4d8;
+  background: var(--color-paper);
+  cursor: pointer;
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    transform 100ms;
+}
+input[type="checkbox"]:not([role="switch"])::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border: 2px solid white;
+  border-top: 0;
+  border-right: 0;
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform 150ms;
+}
+input[type="checkbox"]:not([role="switch"]):checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+input[type="checkbox"]:not([role="switch"]):checked::after {
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+input[type="checkbox"]:not([role="switch"]):active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* --- Interruptor (checkbox con role="switch") --------------------------- */
+input[type="checkbox"][role="switch"] {
+  appearance: none;
+  min-height: 0;
+  width: 46px;
+  height: 28px;
+  flex-shrink: 0;
+  position: relative;
+  border-radius: 9999px;
+  background: var(--color-control);
+  cursor: pointer;
+  transition: background-color 200ms;
+}
+input[type="checkbox"][role="switch"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: var(--shadow-control);
+  transition: transform 200ms;
+}
+input[type="checkbox"][role="switch"]:checked {
+  background: var(--color-warn);
+}
+input[type="checkbox"][role="switch"]:checked::before {
+  transform: translateX(18px);
+}
+
+input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 input[type="radio"] {
   min-height: 0;
   width: 20px;
   height: 20px;
+  accent-color: var(--color-accent);
+}
+
+input:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

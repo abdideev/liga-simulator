@@ -1,70 +1,114 @@
 "use client";
 
-import { ShieldAlert } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { motion } from "motion/react";
 
-import type { Jugador } from "@/lib/types";
+import type { Jugador, ResultadoOperacion } from "@/lib/types";
+
+interface PropsLista {
+  titulo: string;
+  plantel: Jugador[];
+  convocados: string[];
+  titulares: string[];
+  maxTitulares: number;
+  editable: boolean;
+  convocable: (jugador: Jugador) => ResultadoOperacion;
+  onCambiar: (ids: string[]) => void;
+  onAlternarTitular: (jugadorId: string) => void;
+  lado: "local" | "visitante";
+}
 
 function ListaConvocatoria({
   titulo,
   plantel,
-  seleccionados,
-  soloLectura,
-  suspendido,
+  convocados,
+  titulares,
+  maxTitulares,
+  editable,
+  convocable,
   onCambiar,
-}: {
-  titulo: string;
-  plantel: Jugador[];
-  seleccionados: string[];
-  soloLectura: boolean;
-  suspendido: (jugadorId: string) => { suspendido: boolean; motivo?: string };
-  onCambiar: (ids: string[]) => void;
-}) {
+  onAlternarTitular,
+  lado,
+}: PropsLista) {
   function alternar(jugadorId: string) {
-    if (seleccionados.includes(jugadorId)) {
-      onCambiar(seleccionados.filter((id) => id !== jugadorId));
-    } else {
-      onCambiar([...seleccionados, jugadorId]);
-    }
+    onCambiar(
+      convocados.includes(jugadorId)
+        ? convocados.filter((id) => id !== jugadorId)
+        : [...convocados, jugadorId]
+    );
   }
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">{titulo}</h3>
-        <span className="text-xs text-gray-500">{seleccionados.length} convocados</span>
+    <div data-testid={`convocatoria-${lado}`}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="truncate font-semibold text-ink">{titulo}</h3>
+        <span className="shrink-0 text-xs text-muted">
+          {convocados.length} convocados · {titulares.length}/{maxTitulares} titulares
+        </span>
       </div>
       <div className="space-y-1.5">
         {plantel.map((jugador) => {
-          const info = suspendido(jugador.id);
-          const marcado = seleccionados.includes(jugador.id);
+          const marcado = convocados.includes(jugador.id);
+          const esTitular = titulares.includes(jugador.id);
+          const permiso = convocable(jugador);
+          const bloqueado = !permiso.ok && !marcado;
+          const esSuspension = permiso.motivo?.startsWith("Suspendido");
           return (
-            <div key={jugador.id}>
-              <label
-                className={`flex min-h-11 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm ${
-                  info.suspendido
-                    ? "border-(--color-danger-light) bg-(--color-danger-light)/40 text-gray-400"
+            <div
+              key={jugador.id}
+              data-testid={`convocable-${jugador.id}`}
+              data-bloqueado={!permiso.ok}
+            >
+              <div
+                className={`flex min-h-12 items-center gap-3 rounded-2xl px-3 py-1.5 text-sm transition-colors ${
+                  !permiso.ok
+                    ? "bg-canvas/60"
                     : marcado
-                    ? "border-(--color-primary) bg-(--color-primary-light)"
-                    : "border-(--color-border) bg-white"
+                      ? "bg-accent-soft"
+                      : "bg-canvas hover:bg-control/70"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={marcado}
-                  disabled={soloLectura || info.suspendido}
+                  disabled={!editable || bloqueado}
                   onChange={() => alternar(jugador.id)}
+                  aria-label={`Convocar a ${jugador.nombreCompleto}`}
                 />
-                <span className="w-7 shrink-0 text-xs font-bold text-gray-500">
+                <span className="w-6 shrink-0 text-xs font-semibold text-muted">
                   {jugador.numero ?? "—"}
                 </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-gray-900">
+                <span
+                  className={`min-w-0 flex-1 truncate font-medium ${
+                    permiso.ok ? "text-ink" : "text-muted"
+                  }`}
+                >
                   {jugador.nombreCompleto}
                 </span>
-              </label>
-              {info.suspendido && (
-                <p className="mt-0.5 flex items-center gap-1 pl-2 text-xs font-medium text-(--color-danger)">
-                  <ShieldAlert size={12} />
-                  Suspendido — {info.motivo}
+                {marcado && (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.9 }}
+                    disabled={!editable || (!esTitular && titulares.length >= maxTitulares)}
+                    onClick={() => onAlternarTitular(jugador.id)}
+                    data-testid={`titular-${jugador.id}`}
+                    className={`h-7 min-h-0 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      esTitular ? "bg-accent text-white shadow-control" : "bg-paper text-muted shadow-control"
+                    }`}
+                  >
+                    {esTitular ? "Titular" : "Suplente"}
+                  </motion.button>
+                )}
+              </div>
+              {!permiso.ok && (
+                <p
+                  className={`mt-0.5 flex items-center gap-1 pl-2 text-xs font-medium ${
+                    esSuspension ? "text-danger-ink" : "text-warn-ink"
+                  }`}
+                >
+                  {esSuspension ? <ShieldAlert size={12} /> : <AlertTriangle size={12} />}
+                  {esSuspension ? permiso.motivo : `No convocable — ${permiso.motivo}`}
                 </p>
               )}
             </div>
@@ -75,46 +119,52 @@ function ListaConvocatoria({
   );
 }
 
+export interface LadoConvocatoria {
+  nombre: string;
+  plantel: Jugador[];
+  convocados: string[];
+  titulares: string[];
+  editable: boolean;
+  onCambiar: (ids: string[]) => void;
+  onAlternarTitular: (jugadorId: string) => void;
+}
+
 export default function PanelConvocatoria({
-  nombreLocal,
-  nombreVisitante,
-  plantelLocal,
-  plantelVisitante,
-  convocadosLocal,
-  convocadosVisitante,
-  soloLectura,
-  suspendido,
-  onCambiarLocal,
-  onCambiarVisitante,
+  local,
+  visitante,
+  maxTitulares,
+  convocable,
 }: {
-  nombreLocal: string;
-  nombreVisitante: string;
-  plantelLocal: Jugador[];
-  plantelVisitante: Jugador[];
-  convocadosLocal: string[];
-  convocadosVisitante: string[];
-  soloLectura: boolean;
-  suspendido: (jugadorId: string) => { suspendido: boolean; motivo?: string };
-  onCambiarLocal: (ids: string[]) => void;
-  onCambiarVisitante: (ids: string[]) => void;
+  local: LadoConvocatoria;
+  visitante: LadoConvocatoria;
+  maxTitulares: number;
+  convocable: (jugador: Jugador) => ResultadoOperacion;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <ListaConvocatoria
-        titulo={nombreLocal}
-        plantel={plantelLocal}
-        seleccionados={convocadosLocal}
-        soloLectura={soloLectura}
-        suspendido={suspendido}
-        onCambiar={onCambiarLocal}
+        lado="local"
+        titulo={local.nombre}
+        plantel={local.plantel}
+        convocados={local.convocados}
+        titulares={local.titulares}
+        maxTitulares={maxTitulares}
+        editable={local.editable}
+        convocable={convocable}
+        onCambiar={local.onCambiar}
+        onAlternarTitular={local.onAlternarTitular}
       />
       <ListaConvocatoria
-        titulo={nombreVisitante}
-        plantel={plantelVisitante}
-        seleccionados={convocadosVisitante}
-        soloLectura={soloLectura}
-        suspendido={suspendido}
-        onCambiar={onCambiarVisitante}
+        lado="visitante"
+        titulo={visitante.nombre}
+        plantel={visitante.plantel}
+        convocados={visitante.convocados}
+        titulares={visitante.titulares}
+        maxTitulares={maxTitulares}
+        editable={visitante.editable}
+        convocable={convocable}
+        onCambiar={visitante.onCambiar}
+        onAlternarTitular={visitante.onAlternarTitular}
       />
     </div>
   );

@@ -2,61 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  CalendarDays,
-  ClipboardList,
-  Eye,
-  Home,
-  Lock,
-  RotateCcw,
-  ScrollText,
-  Settings,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { RotateCcw, X, type LucideIcon } from "lucide-react";
+import { motion } from "motion/react";
 
 import { useSimulador } from "@/context/SimuladorContext";
-import type { RolSimulado } from "@/lib/types";
+import { puedeAccederRuta, seccionDeRuta } from "@/lib/permisos";
+
+import { ICONO_SECCION } from "./iconosSeccion";
+import { PULSAR, RESORTE, RESORTE_SUAVE } from "./ui/movimiento";
 
 interface ItemNav {
   href: string;
   etiqueta: string;
   icono: LucideIcon;
-  roles: RolSimulado[];
+  /** Shown in the menu only for these roles (access itself is decided by permisos.ts). */
+  soloEnMenuPara?: Array<"administrador" | "delegado" | "publico">;
 }
 
 const ITEMS: ItemNav[] = [
-  { href: "/", etiqueta: "Inicio", icono: Home, roles: ["administrador", "delegado", "publico"] },
+  { href: "/", etiqueta: "Inicio", icono: ICONO_SECCION.inicio },
+  { href: "/configuracion", etiqueta: "Configuración de liga", icono: ICONO_SECCION.configuracion },
+  { href: "/equipos", etiqueta: "Equipos", icono: ICONO_SECCION.equipos },
+  { href: "/registro", etiqueta: "Cierre de registro", icono: ICONO_SECCION.registro },
+  { href: "/calendario", etiqueta: "Calendario", icono: ICONO_SECCION.calendario },
+  { href: "/partidos", etiqueta: "Partidos", icono: ICONO_SECCION.partidos },
+  { href: "/estadisticas", etiqueta: "Tabla y estadísticas", icono: ICONO_SECCION.estadisticas },
+  { href: "/bitacora", etiqueta: "Bitácora", icono: ICONO_SECCION.bitacora },
   {
-    href: "/configuracion",
-    etiqueta: "Configuración de liga",
-    icono: Settings,
-    roles: ["administrador"],
+    href: "/publico",
+    etiqueta: "Vista pública",
+    icono: ICONO_SECCION.publico,
+    soloEnMenuPara: ["publico"],
   },
-  { href: "/equipos", etiqueta: "Equipos", icono: Users, roles: ["administrador", "delegado"] },
-  { href: "/registro", etiqueta: "Cierre de registro", icono: Lock, roles: ["administrador"] },
-  {
-    href: "/calendario",
-    etiqueta: "Calendario",
-    icono: CalendarDays,
-    roles: ["administrador", "delegado"],
-  },
-  {
-    href: "/partidos",
-    etiqueta: "Partidos",
-    icono: ClipboardList,
-    roles: ["administrador", "delegado"],
-  },
-  {
-    href: "/estadisticas",
-    etiqueta: "Tabla y estadísticas",
-    icono: BarChart3,
-    roles: ["administrador", "delegado"],
-  },
-  { href: "/bitacora", etiqueta: "Bitácora", icono: ScrollText, roles: ["administrador"] },
-  { href: "/publico", etiqueta: "Vista pública", icono: Eye, roles: ["publico"] },
 ];
 
 export default function NavSidebar({
@@ -68,7 +45,12 @@ export default function NavSidebar({
 }) {
   const pathname = usePathname();
   const { estado, reiniciarSimulacion } = useSimulador();
-  const items = ITEMS.filter((item) => item.roles.includes(estado.rolActual));
+  const items = ITEMS.filter(
+    (item) =>
+      puedeAccederRuta(estado.rolActual, item.href) &&
+      (!item.soloEnMenuPara || item.soloEnMenuPara.includes(estado.rolActual))
+  );
+  const seccionActual = seccionDeRuta(pathname);
 
   function manejarReinicio() {
     const confirmado = window.confirm(
@@ -86,20 +68,21 @@ export default function NavSidebar({
         <button
           aria-label="Cerrar menú"
           onClick={onCerrar}
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-sm md:hidden"
         />
       )}
       <nav
-        className={`fixed inset-y-0 left-0 z-50 w-72 transform border-r border-(--color-border) bg-(--color-surface) p-3 transition-transform duration-200 md:relative md:z-0 md:w-56 md:translate-x-0 md:border-r md:p-3 ${
+        aria-label="Menú principal"
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform rounded-r-3xl bg-paper p-3 shadow-elevada transition-transform duration-200 md:sticky md:top-[60px] md:z-0 md:h-[calc(100vh-60px)] md:w-60 md:translate-x-0 md:rounded-none md:bg-transparent md:p-4 md:shadow-none ${
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="mb-2 flex items-center justify-between md:hidden">
-          <span className="text-sm font-semibold text-gray-500">Menú</span>
+          <span className="text-sm font-semibold text-muted">Menú</span>
           <button
             onClick={onCerrar}
             aria-label="Cerrar menú"
-            className="grid h-11 w-11 place-items-center rounded-lg hover:bg-gray-100"
+            className="grid h-11 w-11 place-items-center rounded-full hover:bg-control"
           >
             <X size={20} />
           </button>
@@ -107,23 +90,37 @@ export default function NavSidebar({
 
         <ul className="flex flex-col gap-1">
           {items.map((item) => {
-            const activo = pathname === item.href;
+            const activo = seccionActual === item.href;
             const Icono = item.icono;
             return (
-              <li key={item.href}>
+              <motion.li
+                key={item.href}
+                className="relative"
+                whileHover={activo ? undefined : { x: 3 }}
+                whileTap={PULSAR}
+                transition={RESORTE}
+              >
+                {activo && (
+                  // The white pill slides from the previous section to the new one.
+                  <motion.span
+                    layoutId="nav-activo"
+                    transition={RESORTE_SUAVE}
+                    className="absolute inset-0 rounded-full bg-paper shadow-control"
+                  />
+                )}
                 <Link
                   href={item.href}
                   onClick={onCerrar}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
-                    activo
-                      ? "bg-(--color-primary-light) text-(--color-primary-dark)"
-                      : "text-gray-700 hover:bg-gray-100"
+                  data-testid={`nav-${item.href === "/" ? "inicio" : item.href.slice(1)}`}
+                  aria-current={activo ? "page" : undefined}
+                  className={`relative flex min-h-11 items-center gap-3 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                    activo ? "text-ink" : "text-muted hover:bg-control/70 hover:text-ink"
                   }`}
                 >
-                  <Icono size={18} />
+                  <Icono size={18} className={activo ? "text-accent" : ""} />
                   {item.etiqueta}
                 </Link>
-              </li>
+              </motion.li>
             );
           })}
         </ul>
@@ -131,7 +128,7 @@ export default function NavSidebar({
         <button
           type="button"
           onClick={manejarReinicio}
-          className="mt-4 flex min-h-11 w-full items-center gap-2 rounded-lg border border-(--color-border) px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 sm:hidden"
+          className="mt-4 flex min-h-11 w-full items-center gap-2 rounded-full bg-control px-4 py-2 text-sm font-medium text-ink hover:bg-[#e0e0e2] sm:hidden"
         >
           <RotateCcw size={16} />
           Reiniciar simulación
