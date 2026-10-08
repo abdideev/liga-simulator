@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Wifi, WifiOff } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import Aviso from "@/components/ui/Aviso";
 
@@ -48,12 +49,19 @@ export default function PanelModoOffline({
         </Aviso>
       )}
 
+      <AnimatePresence>
       {sincronizando && (
-        <div className="flex items-center gap-2 rounded-2xl bg-canvas px-4 py-3 text-sm font-medium text-muted">
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          className="flex items-center gap-2 rounded-2xl bg-canvas px-4 py-3 text-sm font-medium text-muted"
+        >
           <Loader2 size={16} className="animate-spin" />
           Sincronizando…
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

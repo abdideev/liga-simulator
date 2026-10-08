@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, CheckCircle2, ListOrdered, Play, Users } from "lucide-react";
 
 import { useSimulador } from "@/context/SimuladorContext";
@@ -207,15 +208,22 @@ export default function CapturaPartidoPage() {
         }
       />
 
+      <AnimatePresence>
       {mensajeToast && (
-        <div
+        <motion.div
+          key={mensajeToast}
+          initial={{ opacity: 0, y: 24, scale: 0.9, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+          exit={{ opacity: 0, y: 12, scale: 0.95, x: "-50%" }}
+          transition={{ type: "spring", stiffness: 420, damping: 28 }}
           role="status"
           data-testid="toast"
-          className="fixed bottom-4 left-1/2 z-40 max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper shadow-elevada"
+          className="fixed bottom-4 left-1/2 z-40 max-w-[calc(100%-2rem)] rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper shadow-elevada"
         >
           {mensajeToast}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {!operaMesa && (
         <Aviso intencion="accent">

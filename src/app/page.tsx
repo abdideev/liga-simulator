@@ -97,9 +97,14 @@ export default function InicioPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {tarjetas.map((t) => (
+        {tarjetas.map((t, i) => (
           <Link key={t.titulo} href={t.href} data-testid={`tarjeta-inicio-${t.titulo.toLowerCase().replace(/\s+/g, "-")}`}>
-            <Tarjeta className="h-full transition-shadow hover:shadow-elevada">
+            <Tarjeta
+              interactiva
+              className="h-full"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: i * 0.06 } }}
+            >
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent-soft text-accent">
                 <t.icono size={20} />
               </span>

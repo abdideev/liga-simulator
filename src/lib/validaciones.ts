@@ -4,7 +4,7 @@
 
 import type { AccionSimulador, DatosCategoria, DatosEvento, EntornoReducer } from "./acciones";
 import { fechaISOLocal } from "./fechas";
-import { obtenerMesa } from "./mesa";
+import { MINUTO_MAXIMO, obtenerMesa } from "./mesa";
 import { puedeActuarPorEquipo, puedeInscribirEn, puedeOperarMesa, puedeResolverProtesta } from "./permisos";
 import { TIPOS_QUE_REQUIEREN_JUGADOR } from "./eventos";
 import {
@@ -57,8 +57,8 @@ function validarEvento(partido: Partido, evento: DatosEvento): ResultadoOperacio
         ? "visitante"
         : null;
   if (!lado) return error("El equipo del evento no juega este partido");
-  if (!Number.isInteger(evento.minuto) || evento.minuto < 0 || evento.minuto > 130) {
-    return error("El minuto debe estar entre 0 y 130");
+  if (!Number.isInteger(evento.minuto) || evento.minuto < 0 || evento.minuto > MINUTO_MAXIMO) {
+    return error(`El minuto debe estar entre 0 y ${MINUTO_MAXIMO}`);
   }
 
   const convocados = convocadosDelLado(partido, lado);

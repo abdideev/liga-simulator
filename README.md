@@ -187,13 +187,19 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
   la paleta del equipo.
 - **Tipografía:** **Inter**, auto-hospedada con `next/font` para que
   funcione sin internet.
+- **Animaciones:** [Motion](https://motion.dev) (`motion/react`): pantalla
+  de carga, transición entre páginas, efecto de pulsar y de escalar al
+  pasar el mouse en botones y tarjetas, pestañas y menú con indicador
+  deslizante, entrada de eventos y "pop" del marcador al anotar. Respeta la
+  opción del sistema "reducir movimiento" (`MotionConfig reducedMotion="user"`).
 
 ## Organización del código
 
 ```
 src/app/...                        rutas de cada pantalla (Next.js App Router)
 src/components/...                 componentes de interfaz
-src/components/ui/...              sistema de diseño: Boton, Etiqueta, Tarjeta, Aviso, Campo…
+src/components/ui/...              sistema de diseño: Boton, Etiqueta, Tarjeta, Aviso, Campo, Cargando…
+src/components/ui/movimiento.ts    presets de animación compartidos (Motion)
 src/context/SimuladorContext.tsx   valida y despacha acciones; persiste el estado
 src/lib/types.ts                   modelo de datos del dominio
 src/lib/acciones.ts                catálogo de acciones (AccionSimulador) y su entorno

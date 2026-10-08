@@ -31,7 +31,7 @@ export default function TarjetaPartido({
   const estado = ESTADO_PARTIDO[partido.estado];
   return (
     <Tarjeta
-      className={interactiva ? "transition-shadow hover:shadow-elevada" : ""}
+      interactiva={interactiva}
       data-testid={`partido-${partido.id}`}
       data-estado={partido.estado}
     >

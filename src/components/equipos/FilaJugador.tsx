@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { ChevronDown, ShieldCheck } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
 import Etiqueta from "@/components/ui/Etiqueta";
+import { RESORTE, SOBRE_FILA } from "@/components/ui/movimiento";
 import InsigniaElegibilidad from "@/components/ui/InsigniaElegibilidad";
 import { calcularEdad, esMenorDeEdad, estadoEfectivo } from "@/lib/rules";
 import type { Jugador } from "@/lib/types";
@@ -27,7 +29,10 @@ export default function FilaJugador({
   const necesitaRevision = jugador.estadoElegibilidad === "Requiere revisión manual";
 
   return (
-    <div
+    <motion.div
+      layout
+      whileHover={SOBRE_FILA}
+      transition={RESORTE}
       className="rounded-2xl bg-paper shadow-suave transition-shadow hover:shadow-elevada"
       data-testid={`fila-jugador-${jugador.id}`}
       data-estado={estado}
@@ -54,15 +59,23 @@ export default function FilaJugador({
             data-testid={`boton-revisar-${jugador.id}`}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-control"
           >
-            <ChevronDown
-              size={18}
-              className={`transition-transform ${abierto ? "rotate-180" : ""}`}
-            />
+            <motion.span animate={{ rotate: abierto ? 180 : 0 }} transition={RESORTE}>
+              <ChevronDown size={18} />
+            </motion.span>
           </button>
         )}
       </div>
 
+      <AnimatePresence initial={false}>
       {esAdministrador && necesitaRevision && abierto && (
+        <motion.div
+          key="panel"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.22 }}
+          className="overflow-hidden"
+        >
         <div className="mx-3 mb-3 space-y-3 rounded-2xl bg-canvas p-4" data-testid={`panel-anulacion-${jugador.id}`}>
           <p className="text-sm text-muted">
             Motivo de revisión: {jugador.motivoRevision ?? "CURP inconsistente o incompleta"}
@@ -99,7 +112,9 @@ export default function FilaJugador({
             </Etiqueta>
           )}
         </div>
+        </motion.div>
       )}
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 }

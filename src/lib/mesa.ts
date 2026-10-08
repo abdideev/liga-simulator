@@ -8,6 +8,9 @@ import type { EstadoMesa } from "./types";
  */
 export const MS_POR_MINUTO_SIMULADO = 1000;
 
+/** Upper bound for a match minute (regular time, stoppage and extra time). */
+export const MINUTO_MAXIMO = 130;
+
 export const ESTADO_MESA_INICIAL: EstadoMesa = {
   minutoBase: 0,
   cronometroDesde: null,
@@ -19,11 +22,15 @@ export function obtenerMesa(mesas: Record<string, EstadoMesa>, partidoId: string
   return mesas[partidoId] ?? ESTADO_MESA_INICIAL;
 }
 
-/** Current match minute, derived from timestamps so it survives navigation and reloads. */
+/**
+ * Current match minute, derived from timestamps so it survives navigation and
+ * reloads. Capped at MINUTO_MAXIMO so a stopwatch left running (e.g. the mesa
+ * left open after the match) never produces an invalid minute.
+ */
 export function minutoActual(mesa: EstadoMesa, ahoraMs: number): number {
-  if (mesa.cronometroDesde === null) return mesa.minutoBase;
+  if (mesa.cronometroDesde === null) return Math.min(mesa.minutoBase, MINUTO_MAXIMO);
   const transcurridos = Math.floor((ahoraMs - mesa.cronometroDesde) / MS_POR_MINUTO_SIMULADO);
-  return mesa.minutoBase + Math.max(0, transcurridos);
+  return Math.min(mesa.minutoBase + Math.max(0, transcurridos), MINUTO_MAXIMO);
 }
 
 export function pausarCronometro(mesa: EstadoMesa, ahoraMs: number): EstadoMesa {
@@ -37,7 +44,7 @@ export function reanudarCronometro(mesa: EstadoMesa, ahoraMs: number): EstadoMes
 
 export function ajustarMinuto(mesa: EstadoMesa, delta: number, ahoraMs: number): EstadoMesa {
   const actual = minutoActual(mesa, ahoraMs);
-  const nuevo = Math.max(0, actual + delta);
+  const nuevo = Math.min(MINUTO_MAXIMO, Math.max(0, actual + delta));
   return {
     ...mesa,
     minutoBase: nuevo,

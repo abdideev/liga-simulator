@@ -151,9 +151,8 @@ export default function EquiposPage() {
               const visible = puedeVerPlantel(rolActual, equipoDelegadoId, equipo.id);
               const contenido = (
                 <Tarjeta
-                  className={`flex items-center justify-between gap-3 ${
-                    visible ? "transition-shadow hover:shadow-elevada" : "opacity-80"
-                  }`}
+                  interactiva={visible}
+                  className={`flex items-center justify-between gap-3 ${visible ? "" : "opacity-80"}`}
                 >
                   <Avatar nombre={equipo.nombre} tamano="lg" />
                   <div className="min-w-0 flex-1 space-y-0.5">

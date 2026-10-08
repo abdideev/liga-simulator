@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 import Aviso from "@/components/ui/Aviso";
 import Boton from "@/components/ui/Boton";
 import { claseCampo } from "@/components/ui/Campo";
+import { PULSAR, RESORTE, SOBRE_BOTON } from "@/components/ui/movimiento";
 import {
   ETIQUETA_EVENTO,
   ICONO_EVENTO,
@@ -12,6 +14,7 @@ import {
   TIPOS_QUE_REQUIEREN_JUGADOR,
 } from "@/lib/eventosUtil";
 import type { DatosEvento } from "@/lib/acciones";
+import { MINUTO_MAXIMO } from "@/lib/mesa";
 import type { Jugador, ResultadoOperacion, TipoEvento } from "@/lib/types";
 
 interface Props {
@@ -113,9 +116,12 @@ export default function PanelRegistrarEvento({
           const Icono = ICONO_EVENTO[t];
           const activo = tipo === t;
           return (
-            <button
+            <motion.button
               key={t}
               type="button"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.92 }}
+              transition={RESORTE}
               onClick={() => elegirTipo(t)}
               data-testid={`tipo-evento-${t}`}
               aria-pressed={activo}
@@ -127,13 +133,21 @@ export default function PanelRegistrarEvento({
             >
               <Icono size={18} />
               <span className="text-center">{ETIQUETA_EVENTO[t]}</span>
-            </button>
+            </motion.button>
           );
         })}
       </div>
 
+      <AnimatePresence mode="wait">
       {tipo && (
-        <div className="space-y-3 rounded-2xl bg-canvas p-4">
+        <motion.div
+          key={tipo}
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, transition: { duration: 0.12 } }}
+          transition={{ duration: 0.2 }}
+          className="space-y-3 rounded-2xl bg-canvas p-4"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">{ETIQUETA_EVENTO[tipo]}</p>
             <label className="flex items-center gap-2 text-sm text-muted">
@@ -141,7 +155,7 @@ export default function PanelRegistrarEvento({
               <input
                 type="number"
                 min={0}
-                max={130}
+                max={MINUTO_MAXIMO}
                 value={minuto}
                 onChange={(e) => setMinuto(Number(e.target.value))}
                 className="w-16 rounded-xl bg-paper px-2 py-1 text-center text-ink shadow-control outline-none focus:ring-2 focus:ring-accent"
@@ -151,22 +165,28 @@ export default function PanelRegistrarEvento({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button
+            <motion.button
               type="button"
+              whileHover={SOBRE_BOTON}
+              whileTap={PULSAR}
+              transition={RESORTE}
               onClick={() => elegirEquipo(equipoLocalId)}
               className={claseEquipo(equipoId === equipoLocalId)}
               data-testid="evento-equipo-local"
             >
               {nombreLocal}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
+              whileHover={SOBRE_BOTON}
+              whileTap={PULSAR}
+              transition={RESORTE}
               onClick={() => elegirEquipo(equipoVisitanteId)}
               className={claseEquipo(equipoId === equipoVisitanteId)}
               data-testid="evento-equipo-visitante"
             >
               {nombreVisitante}
-            </button>
+            </motion.button>
           </div>
 
           {equipoId && !esSustitucion && (
@@ -214,8 +234,9 @@ export default function PanelRegistrarEvento({
               Cancelar
             </Boton>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { RotateCcw, X, type LucideIcon } from "lucide-react";
+import { motion } from "motion/react";
 
 import { useSimulador } from "@/context/SimuladorContext";
 import { puedeAccederRuta, seccionDeRuta } from "@/lib/permisos";
 
 import { ICONO_SECCION } from "./iconosSeccion";
+import { PULSAR, RESORTE, RESORTE_SUAVE } from "./ui/movimiento";
 
 interface ItemNav {
   href: string;
@@ -91,22 +93,34 @@ export default function NavSidebar({
             const activo = seccionActual === item.href;
             const Icono = item.icono;
             return (
-              <li key={item.href}>
+              <motion.li
+                key={item.href}
+                className="relative"
+                whileHover={activo ? undefined : { x: 3 }}
+                whileTap={PULSAR}
+                transition={RESORTE}
+              >
+                {activo && (
+                  // The white pill slides from the previous section to the new one.
+                  <motion.span
+                    layoutId="nav-activo"
+                    transition={RESORTE_SUAVE}
+                    className="absolute inset-0 rounded-full bg-paper shadow-control"
+                  />
+                )}
                 <Link
                   href={item.href}
                   onClick={onCerrar}
                   data-testid={`nav-${item.href === "/" ? "inicio" : item.href.slice(1)}`}
                   aria-current={activo ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${
-                    activo
-                      ? "bg-paper text-ink shadow-control"
-                      : "text-muted hover:bg-control/70 hover:text-ink"
+                  className={`relative flex min-h-11 items-center gap-3 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                    activo ? "text-ink" : "text-muted hover:bg-control/70 hover:text-ink"
                   }`}
                 >
                   <Icono size={18} className={activo ? "text-accent" : ""} />
                   {item.etiqueta}
                 </Link>
-              </li>
+              </motion.li>
             );
           })}
         </ul>

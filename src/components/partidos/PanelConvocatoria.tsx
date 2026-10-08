@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { motion } from "motion/react";
 
 import type { Jugador, ResultadoOperacion } from "@/lib/types";
 
@@ -85,8 +86,10 @@ function ListaConvocatoria({
                   {jugador.nombreCompleto}
                 </span>
                 {marcado && (
-                  <button
+                  <motion.button
                     type="button"
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.9 }}
                     disabled={!editable || (!esTitular && titulares.length >= maxTitulares)}
                     onClick={() => onAlternarTitular(jugador.id)}
                     data-testid={`titular-${jugador.id}`}
@@ -95,7 +98,7 @@ function ListaConvocatoria({
                     }`}
                   >
                     {esTitular ? "Titular" : "Suplente"}
-                  </button>
+                  </motion.button>
                 )}
               </div>
               {!permiso.ok && (

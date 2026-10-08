@@ -1,4 +1,7 @@
+"use client";
+
 import { Minus, Pause, Play, Plus } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import Boton from "@/components/ui/Boton";
 
@@ -41,9 +44,31 @@ export default function Marcador({
           className="flex shrink-0 items-center gap-2 rounded-2xl bg-ink px-5 py-2 text-3xl font-semibold tabular-nums text-paper"
           data-testid="marcador-goles"
         >
-          <span>{golesLocal}</span>
+          {/* initial={false}: no pop on page load, only when the score changes. */}
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.span
+              key={`l-${golesLocal}`}
+              initial={{ scale: 1.7, color: "#4da3ff" }}
+              animate={{ scale: 1, color: "#ffffff" }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{ type: "spring", stiffness: 300, damping: 14 }}
+            >
+              {golesLocal}
+            </motion.span>
+          </AnimatePresence>
           <span className="text-paper/50">-</span>
-          <span>{golesVisitante}</span>
+          {/* initial={false}: no pop on page load, only when the score changes. */}
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.span
+              key={`v-${golesVisitante}`}
+              initial={{ scale: 1.7, color: "#4da3ff" }}
+              animate={{ scale: 1, color: "#ffffff" }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{ type: "spring", stiffness: 300, damping: 14 }}
+            >
+              {golesVisitante}
+            </motion.span>
+          </AnimatePresence>
         </div>
         <span className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-ink">
           {nombreVisitante}
