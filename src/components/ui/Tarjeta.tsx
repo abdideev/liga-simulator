@@ -4,7 +4,7 @@ export default function Tarjeta({ className = "", ...props }: HTMLAttributes<HTM
   return (
     <div
       {...props}
-      className={`rounded-xl border border-(--color-border) bg-(--color-surface) p-4 shadow-sm ${className}`}
+      className={`rounded-xl border border-border bg-paper p-4 shadow-sm sm:p-5 ${className}`}
     />
   );
 }

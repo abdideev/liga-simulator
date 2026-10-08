@@ -1,17 +1,21 @@
+import { AlertTriangle, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
+
 import type { EstadoElegibilidad } from "@/lib/types";
 
-const ESTILOS: Record<EstadoElegibilidad, string> = {
-  Elegible: "bg-(--color-primary-light) text-(--color-primary-dark)",
-  "No elegible por edad": "bg-(--color-danger-light) text-(--color-danger)",
-  "Requiere revisión manual": "bg-(--color-warning-light) text-(--color-warning)",
+import Etiqueta from "./Etiqueta";
+import type { Intencion } from "./estilos";
+
+const ESTILOS: Record<EstadoElegibilidad, { intencion: Intencion; icono: LucideIcon }> = {
+  Elegible: { intencion: "ok", icono: CheckCircle2 },
+  "No elegible por edad": { intencion: "danger", icono: XCircle },
+  "Requiere revisión manual": { intencion: "warn", icono: AlertTriangle },
 };
 
 export default function InsigniaElegibilidad({ estado }: { estado: EstadoElegibilidad }) {
+  const { intencion, icono } = ESTILOS[estado];
   return (
-    <span
-      className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${ESTILOS[estado]}`}
-    >
+    <Etiqueta intencion={intencion} icono={icono} data-testid="insignia-elegibilidad" data-estado={estado}>
       {estado}
-    </span>
+    </Etiqueta>
   );
 }

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 const InnerApp = dynamic(() => import("./InnerApp"), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-screen items-center justify-center text-gray-500">
+    <div className="flex min-h-screen items-center justify-center text-muted">
       Cargando simulador…
     </div>
   ),

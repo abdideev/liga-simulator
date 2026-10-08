@@ -5,8 +5,9 @@ import { ChevronDown, ShieldCheck } from "lucide-react";
 
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
+import Etiqueta from "@/components/ui/Etiqueta";
 import InsigniaElegibilidad from "@/components/ui/InsigniaElegibilidad";
-import { calcularEdad, estadoEfectivo } from "@/lib/rules";
+import { calcularEdad, esMenorDeEdad, estadoEfectivo } from "@/lib/rules";
 import type { Jugador } from "@/lib/types";
 
 export default function FilaJugador({
@@ -21,19 +22,26 @@ export default function FilaJugador({
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState(jugador.overrideAdmin?.motivo ?? "");
   const edad = calcularEdad(jugador.fechaNacimiento);
+  const menor = esMenorDeEdad(jugador.fechaNacimiento);
   const estado = estadoEfectivo(jugador);
   const necesitaRevision = jugador.estadoElegibilidad === "Requiere revisión manual";
 
   return (
-    <div className="rounded-lg border border-(--color-border) bg-white">
+    <div
+      className="rounded-xl border border-border bg-paper"
+      data-testid={`fila-jugador-${jugador.id}`}
+      data-estado={estado}
+    >
       <div className="flex items-center gap-3 p-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-muted">
           {jugador.numero ?? "—"}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-gray-900">{jugador.nombreCompleto}</p>
-          <p className="text-xs text-gray-500">
-            {edad} años {jugador.esMenorDeEdad && "· Menor de edad"}
+          <p className="truncate font-medium text-ink">{jugador.nombreCompleto}</p>
+          <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+            {edad} años
+            {menor && <span>· Menor de edad</span>}
+            {jugador.altaExtemporanea && <span>· Alta extemporánea</span>}
           </p>
         </div>
         <InsigniaElegibilidad estado={estado} />
@@ -42,7 +50,9 @@ export default function FilaJugador({
             type="button"
             onClick={() => setAbierto((v) => !v)}
             aria-label="Revisar elegibilidad"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-gray-500 hover:bg-gray-100"
+            aria-expanded={abierto}
+            data-testid={`boton-revisar-${jugador.id}`}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface"
           >
             <ChevronDown
               size={18}
@@ -53,38 +63,40 @@ export default function FilaJugador({
       </div>
 
       {esAdministrador && necesitaRevision && abierto && (
-        <div className="space-y-3 border-t border-(--color-border) p-3">
-          <p className="text-sm text-gray-600">
+        <div className="space-y-3 border-t border-border p-3" data-testid={`panel-anulacion-${jugador.id}`}>
+          <p className="text-sm text-muted">
             Motivo de revisión: {jugador.motivoRevision ?? "CURP inconsistente o incompleta"}
           </p>
-          <p className="text-xs text-gray-500">CURP capturada: {jugador.curp || "(vacía)"}</p>
+          <p className="text-xs text-muted">CURP capturada: {jugador.curp || "(vacía)"}</p>
           <Campo etiqueta="Motivo de la anulación manual">
             <input
               className={claseCampo}
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej. CURP verificada en documento físico presentado por el delegado"
+              data-testid={`motivo-anulacion-${jugador.id}`}
             />
           </Campo>
           <div className="flex flex-wrap gap-2">
             <Boton
-              variante="primario"
+              intencion="ok"
               disabled={!motivo.trim()}
               onClick={() => onGuardarOverride(true, motivo.trim())}
+              data-testid={`boton-marcar-elegible-${jugador.id}`}
             >
               <ShieldCheck size={16} />
               Marcar como elegible
             </Boton>
             {jugador.overrideAdmin && (
-              <Boton variante="secundario" onClick={() => onGuardarOverride(false, "")}>
+              <Boton intencion="neutral" variante="contorno" onClick={() => onGuardarOverride(false, "")}>
                 Quitar anulación
               </Boton>
             )}
           </div>
           {jugador.overrideAdmin?.elegibleForzado && (
-            <p className="text-xs font-medium text-(--color-primary-dark)">
+            <Etiqueta intencion="ok" icono={ShieldCheck}>
               Anulado manualmente: {jugador.overrideAdmin.motivo}
-            </p>
+            </Etiqueta>
           )}
         </div>
       )}

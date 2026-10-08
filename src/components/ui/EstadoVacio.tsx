@@ -13,11 +13,13 @@ export default function EstadoVacio({
   accion?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-(--color-border) bg-white/60 px-6 py-12 text-center">
-      <Icono size={36} className="text-gray-400" />
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-paper text-muted shadow-sm">
+        <Icono size={22} />
+      </span>
       <div className="space-y-1">
-        <p className="font-semibold text-gray-800">{titulo}</p>
-        <p className="mx-auto max-w-sm text-sm text-gray-500">{descripcion}</p>
+        <p className="font-semibold text-ink">{titulo}</p>
+        <p className="mx-auto max-w-sm text-sm text-muted">{descripcion}</p>
       </div>
       {accion}
     </div>

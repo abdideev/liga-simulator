@@ -1,15 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, ShieldAlert, Trophy } from "lucide-react";
+import { ShieldAlert, Trophy } from "lucide-react";
 
 import { useSimulador } from "@/context/SimuladorContext";
 import Campo, { claseCampo } from "@/components/ui/Campo";
 import Tarjeta from "@/components/ui/Tarjeta";
 import EstadoVacio from "@/components/ui/EstadoVacio";
+import EncabezadoPagina from "@/components/ui/EncabezadoPagina";
+import Pestanas from "@/components/ui/Pestanas";
+import { ICONO_SECCION } from "@/components/iconosSeccion";
 import { calcularEstadisticasJugadores, calcularTabla } from "@/lib/rules";
 
 type Pestana = "posiciones" | "estadisticas" | "suspendidos";
+
+const PESTANAS: { id: Pestana; etiqueta: string }[] = [
+  { id: "posiciones", etiqueta: "Posiciones" },
+  { id: "estadisticas", etiqueta: "Estadísticas" },
+  { id: "suspendidos", etiqueta: "Suspendidos" },
+];
+
+const COLUMNAS_TABLA = ["PJ", "G", "E", "P", "GF", "GC", "DG"] as const;
 
 export default function EstadisticasPage() {
   const { estado } = useSimulador();
@@ -22,40 +33,32 @@ export default function EstadisticasPage() {
     equiposCategoria.some((e) => e.id === j.equipoId)
   );
   const nombreEquipo = (id: string) => equipos.find((e) => e.id === id)?.nombre ?? "Equipo";
+  const hayFinalizados = partidos.some(
+    (p) => p.categoriaId === categoriaId && p.estado === "finalizado"
+  );
 
   const tabla = calcularTabla(
     equiposCategoria.map((e) => e.id),
     partidos,
     categoriaId
   );
-  const estadisticas = calcularEstadisticasJugadores(jugadoresCategoria, partidos, equipos)
+  const todas = calcularEstadisticasJugadores(jugadoresCategoria, partidos);
+  const estadisticas = todas
     .filter((e) => e.goles > 0 || e.tarjetasAmarillas > 0 || e.tarjetasRojas > 0 || e.partidosJugados > 0)
     .sort((a, b) => b.goles - a.goles || b.tarjetasAmarillas - a.tarjetasAmarillas);
-  const suspendidos = calcularEstadisticasJugadores(jugadoresCategoria, partidos, equipos).filter(
-    (e) => e.suspendido
-  );
-
-  const PESTANAS: { id: Pestana; etiqueta: string }[] = [
-    { id: "posiciones", etiqueta: "Posiciones" },
-    { id: "estadisticas", etiqueta: "Estadísticas" },
-    { id: "suspendidos", etiqueta: "Suspendidos" },
-  ];
+  const suspendidos = todas.filter((e) => e.suspendido);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
-          <Trophy className="text-(--color-primary)" size={22} />
-          Tabla y estadísticas
-        </h1>
-        <p className="text-sm text-gray-600">
-          Posiciones, goleo, tarjetas y suspensiones calculadas automáticamente.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <EncabezadoPagina
+        icono={ICONO_SECCION.estadisticas}
+        titulo="Tabla y estadísticas"
+        descripcion="Posiciones, goleo, tarjetas y suspensiones calculadas automáticamente a partir de las actas cerradas."
+      />
 
       {categorias.length === 0 ? (
         <EstadoVacio
-          icono={BarChart3}
+          icono={ICONO_SECCION.estadisticas}
           titulo="No hay categorías configuradas"
           descripcion="Crea una categoría y registra equipos para ver estadísticas."
         />
@@ -66,6 +69,7 @@ export default function EstadisticasPage() {
               className={claseCampo}
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
+              data-testid="selector-categoria"
             >
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -75,61 +79,51 @@ export default function EstadisticasPage() {
             </select>
           </Campo>
 
-          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
-            {PESTANAS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPestana(p.id)}
-                className={`min-h-9 flex-1 rounded-md text-sm font-semibold transition-colors ${
-                  pestana === p.id
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {p.etiqueta}
-              </button>
-            ))}
-          </div>
+          <Pestanas opciones={PESTANAS} valor={pestana} onCambiar={setPestana} />
 
           {pestana === "posiciones" &&
-            (tabla.length === 0 ? (
+            (!hayFinalizados ? (
               <EstadoVacio
                 icono={Trophy}
                 titulo="Sin partidos finalizados"
                 descripcion="La tabla se llenará automáticamente cuando se cierren actas de partidos de esta categoría."
               />
             ) : (
-              <Tarjeta className="overflow-x-auto p-0">
-                <table className="w-full min-w-[480px] text-sm">
+              <Tarjeta className="overflow-x-auto p-0 sm:p-0" data-testid="tabla-posiciones">
+                <table className="w-full min-w-[520px] text-sm">
                   <thead>
-                    <tr className="border-b border-(--color-border) text-left text-xs text-gray-500">
-                      <th className="px-3 py-2 font-semibold">#</th>
-                      <th className="px-3 py-2 font-semibold">Equipo</th>
-                      <th className="px-2 py-2 text-center font-semibold">PJ</th>
-                      <th className="px-2 py-2 text-center font-semibold">G</th>
-                      <th className="px-2 py-2 text-center font-semibold">E</th>
-                      <th className="px-2 py-2 text-center font-semibold">P</th>
-                      <th className="px-2 py-2 text-center font-semibold">GF</th>
-                      <th className="px-2 py-2 text-center font-semibold">GC</th>
-                      <th className="px-2 py-2 text-center font-semibold">DG</th>
-                      <th className="px-3 py-2 text-center font-semibold">Pts</th>
+                    <tr className="border-b border-border bg-surface text-left text-xs text-muted">
+                      <th className="px-4 py-3 font-semibold">#</th>
+                      <th className="px-4 py-3 font-semibold">Equipo</th>
+                      {COLUMNAS_TABLA.map((c) => (
+                        <th key={c} className="px-2 py-3 text-center font-semibold">
+                          {c}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-center font-semibold">Pts</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tabla.map((fila, i) => (
-                      <tr key={fila.equipoId} className="border-b border-(--color-border) last:border-0">
-                        <td className="px-3 py-2 text-gray-500">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium text-gray-900">
-                          {nombreEquipo(fila.equipoId)}
+                      <tr key={fila.equipoId} className="border-b border-border last:border-0">
+                        <td className="px-4 py-3 text-muted">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium text-ink">{nombreEquipo(fila.equipoId)}</td>
+                        {[
+                          fila.partidosJugados,
+                          fila.ganados,
+                          fila.empatados,
+                          fila.perdidos,
+                          fila.golesFavor,
+                          fila.golesContra,
+                          fila.diferenciaGoles,
+                        ].map((valor, j) => (
+                          <td key={j} className="px-2 py-3 text-center tabular-nums text-muted">
+                            {valor}
+                          </td>
+                        ))}
+                        <td className="px-4 py-3 text-center font-semibold tabular-nums text-ink">
+                          {fila.puntos}
                         </td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.partidosJugados}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.ganados}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.empatados}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.perdidos}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.golesFavor}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.golesContra}</td>
-                        <td className="px-2 py-2 text-center text-gray-700">{fila.diferenciaGoles}</td>
-                        <td className="px-3 py-2 text-center font-bold text-gray-900">{fila.puntos}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -140,9 +134,9 @@ export default function EstadisticasPage() {
           {pestana === "estadisticas" &&
             (estadisticas.length === 0 ? (
               <EstadoVacio
-                icono={BarChart3}
+                icono={ICONO_SECCION.estadisticas}
                 titulo="Sin estadísticas todavía"
-                descripcion="Los goles y tarjetas aparecerán aquí cuando se capturen eventos en los partidos."
+                descripcion="Los goles y tarjetas aparecerán aquí cuando se cierren actas con eventos."
               />
             ) : (
               <div className="space-y-2">
@@ -151,25 +145,23 @@ export default function EstadisticasPage() {
                   return (
                     <Tarjeta key={e.jugadorId} className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-gray-900">
-                          {jugador.nombreCompleto}
-                        </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="truncate font-medium text-ink">{jugador.nombreCompleto}</p>
+                        <p className="text-xs text-muted">
                           {nombreEquipo(jugador.equipoId)} · {e.partidosJugados} PJ
                         </p>
                       </div>
-                      <div className="flex shrink-0 gap-3 text-center text-sm">
+                      <div className="flex shrink-0 gap-4 text-center text-sm">
                         <div>
-                          <p className="font-bold text-gray-900">{e.goles}</p>
-                          <p className="text-[10px] text-gray-500">Goles</p>
+                          <p className="font-semibold tabular-nums text-ink">{e.goles}</p>
+                          <p className="text-[10px] text-muted">Goles</p>
                         </div>
                         <div>
-                          <p className="font-bold text-amber-500">{e.tarjetasAmarillas}</p>
-                          <p className="text-[10px] text-gray-500">Amar.</p>
+                          <p className="font-semibold tabular-nums text-warn-ink">{e.tarjetasAmarillas}</p>
+                          <p className="text-[10px] text-muted">Amar.</p>
                         </div>
                         <div>
-                          <p className="font-bold text-(--color-danger)">{e.tarjetasRojas}</p>
-                          <p className="text-[10px] text-gray-500">Rojas</p>
+                          <p className="font-semibold tabular-nums text-danger-ink">{e.tarjetasRojas}</p>
+                          <p className="text-[10px] text-muted">Rojas</p>
                         </div>
                       </div>
                     </Tarjeta>
@@ -183,25 +175,22 @@ export default function EstadisticasPage() {
               <EstadoVacio
                 icono={ShieldAlert}
                 titulo="No hay jugadores suspendidos"
-                descripcion="Cuando un jugador acumule 5 tarjetas amarillas o reciba una tarjeta roja, aparecerá aquí con el motivo de su suspensión."
+                descripcion="Cuando un jugador acumule 5 tarjetas amarillas o reciba una tarjeta roja, aparecerá aquí hasta que cumpla su suspensión en el siguiente partido de su equipo."
               />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2" data-testid="lista-suspendidos">
                 {suspendidos.map((e) => {
                   const jugador = jugadoresCategoria.find((j) => j.id === e.jugadorId)!;
                   return (
-                    <Tarjeta
-                      key={e.jugadorId}
-                      className="flex items-center gap-3 border-(--color-danger)"
-                    >
-                      <ShieldAlert size={20} className="shrink-0 text-(--color-danger)" />
+                    <Tarjeta key={e.jugadorId} className="flex items-center gap-3 border-danger/30">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-danger-soft text-danger-ink">
+                        <ShieldAlert size={18} />
+                      </span>
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-gray-900">
-                          {jugador.nombreCompleto}
-                        </p>
-                        <p className="text-xs text-gray-500">{nombreEquipo(jugador.equipoId)}</p>
-                        <p className="text-xs font-medium text-(--color-danger)">
-                          {e.motivoSuspension}
+                        <p className="truncate font-medium text-ink">{jugador.nombreCompleto}</p>
+                        <p className="text-xs text-muted">{nombreEquipo(jugador.equipoId)}</p>
+                        <p className="text-xs font-medium text-danger-ink">
+                          {e.motivoSuspension} · cumple en el siguiente partido de su equipo
                         </p>
                       </div>
                     </Tarjeta>
