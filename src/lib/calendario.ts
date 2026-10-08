@@ -1,6 +1,7 @@
 // Round-robin schedule generation (circle method). Pure function, reused by
 // both the seed data and the "Generar calendario" action in the Calendario screen.
 
+import { sumarDiasISO } from "./fechas";
 import type { Partido } from "./types";
 
 const BYE = "__DESCANSO__";
@@ -13,12 +14,6 @@ export interface OpcionesCalendario {
   horaDefault: string; // "HH:mm"
   sedes: string[]; // cycled across matches
   crearId: () => string;
-}
-
-function sumarDias(fechaISO: string, dias: number): string {
-  const fecha = new Date(`${fechaISO}T00:00:00`);
-  fecha.setDate(fecha.getDate() + dias);
-  return fecha.toISOString().slice(0, 10);
 }
 
 /**
@@ -51,12 +46,14 @@ export function generarCalendarioRoundRobin(opciones: OpcionesCalendario): Parti
           jornada: ronda + 1,
           equipoLocalId: local,
           equipoVisitanteId: visitante,
-          fecha: sumarDias(fechaInicio, ronda * diasEntreJornadas),
+          fecha: sumarDiasISO(fechaInicio, ronda * diasEntreJornadas),
           hora: horaDefault,
           sede: sedes[sedeIndice % sedes.length],
           estado: "programado",
           convocadosLocal: [],
           convocadosVisitante: [],
+          titularesLocal: [],
+          titularesVisitante: [],
           eventos: [],
           golesLocal: 0,
           golesVisitante: 0,

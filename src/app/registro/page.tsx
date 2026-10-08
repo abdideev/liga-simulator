@@ -1,23 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Lock, LockOpen } from "lucide-react";
+import { CalendarClock, CheckCircle2, Lock, LockOpen } from "lucide-react";
 
 import { useSimulador } from "@/context/SimuladorContext";
+import { estadoRegistro } from "@/lib/rules";
+import { fechaHoy, sumarDiasISO } from "@/lib/fechas";
+import type { Categoria } from "@/lib/types";
+import Aviso from "@/components/ui/Aviso";
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
+import Etiqueta from "@/components/ui/Etiqueta";
 import Tarjeta from "@/components/ui/Tarjeta";
 import EstadoVacio from "@/components/ui/EstadoVacio";
+import EncabezadoPagina from "@/components/ui/EncabezadoPagina";
+import { ICONO_SECCION } from "@/components/iconosSeccion";
 
-function fechaHoy(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+type Formulario = { categoriaId: string; tipo: "cierre" | "ventana" } | null;
 
 export default function CierreRegistroPage() {
-  const { estado, cerrarRegistroCategoria } = useSimulador();
+  const { estado, despachar } = useSimulador();
   const { categorias, equipos, jugadores } = estado;
-  const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
+  const [formulario, setFormulario] = useState<Formulario>(null);
   const [fecha, setFecha] = useState(fechaHoy());
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const hoy = fechaHoy();
+
+  function abrirFormulario(categoriaId: string, tipo: "cierre" | "ventana") {
+    setFormulario({ categoriaId, tipo });
+    setFecha(tipo === "cierre" ? hoy : sumarDiasISO(hoy, 7));
+    setMotivo("");
+    setError(null);
+  }
+
+  function confirmar(categoria: Categoria) {
+    const resultado =
+      formulario?.tipo === "cierre"
+        ? despachar({ tipo: "cerrarRegistroCategoria", categoriaId: categoria.id, fecha })
+        : despachar({
+            tipo: "abrirVentanaExtemporanea",
+            categoriaId: categoria.id,
+            hasta: fecha,
+            motivo,
+          });
+    if (!resultado.ok) {
+      setError(resultado.motivo ?? "No se pudo completar la acción");
+      return;
+    }
+    setFormulario(null);
+  }
 
   if (categorias.length === 0) {
     return (
@@ -33,16 +65,11 @@ export default function CierreRegistroPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
-          <Lock className="text-(--color-primary)" size={22} />
-          Cierre de registro
-        </h1>
-        <p className="text-sm text-gray-600">
-          Congela los planteles de una categoría en una fecha determinada. Después del cierre,
-          los planteles quedan de solo lectura y ya no se pueden inscribir nuevos jugadores.
-        </p>
-      </div>
+      <EncabezadoPagina
+        icono={ICONO_SECCION.registro}
+        titulo="Cierre de registro"
+        descripcion="Congela los planteles de una categoría en una fecha determinada. Después del cierre, el administrador puede abrir una ventana puntual de altas extemporáneas."
+      />
 
       <div className="space-y-3">
         {categorias.map((categoria) => {
@@ -50,75 +77,141 @@ export default function CierreRegistroPage() {
           const jugadoresCat = jugadores.filter((j) =>
             equiposCat.some((e) => e.id === j.equipoId)
           );
-          const formularioAbierto = categoriaActiva === categoria.id;
+          const extemporaneos = jugadoresCat.filter((j) => j.altaExtemporanea).length;
+          const estadoActual = estadoRegistro(categoria, hoy);
+          const formularioAbierto = formulario?.categoriaId === categoria.id;
 
           return (
-            <Tarjeta key={categoria.id}>
+            <Tarjeta key={categoria.id} data-testid={`registro-${categoria.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-gray-900">{categoria.nombre}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-semibold text-ink">{categoria.nombre}</p>
+                  <p className="text-sm text-muted">
                     {equiposCat.length} equipos · {jugadoresCat.length} jugadores inscritos
+                    {extemporaneos > 0 && ` · ${extemporaneos} alta(s) extemporánea(s)`}
                   </p>
                 </div>
-                {categoria.registroCerrado ? (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-(--color-primary-light) px-3 py-1.5 text-xs font-semibold text-(--color-primary-dark)">
-                    <CheckCircle2 size={14} />
-                    Cerrado
-                  </span>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600">
-                    <LockOpen size={14} />
+                {estadoActual === "abierto" && (
+                  <Etiqueta intencion="ok" icono={LockOpen}>
                     Abierto
-                  </span>
+                  </Etiqueta>
+                )}
+                {estadoActual === "extemporaneo" && (
+                  <Etiqueta intencion="warn" icono={CalendarClock}>
+                    Ventana extemporánea
+                  </Etiqueta>
+                )}
+                {estadoActual === "cerrado" && (
+                  <Etiqueta intencion="neutral" icono={CheckCircle2}>
+                    Cerrado
+                  </Etiqueta>
                 )}
               </div>
 
-              {categoria.registroCerrado ? (
-                <p className="mt-2 text-xs font-medium text-gray-500">
+              {categoria.registroCerrado && (
+                <p className="mt-2 text-xs font-medium text-muted">
                   Registro congelado el {categoria.fechaCierreRegistro}
                 </p>
-              ) : formularioAbierto ? (
-                <div className="mt-3 space-y-3 border-t border-(--color-border) pt-3">
-                  <Campo etiqueta="Fecha de cierre">
+              )}
+
+              {categoria.ventanaExtemporanea && (
+                <Aviso intencion={estadoActual === "extemporaneo" ? "warn" : "accent"} className="mt-3">
+                  {estadoActual === "extemporaneo" ? "Altas extemporáneas abiertas" : "Ventana vencida"}{" "}
+                  del {categoria.ventanaExtemporanea.abiertaEl} al{" "}
+                  {categoria.ventanaExtemporanea.hasta}. Motivo: {categoria.ventanaExtemporanea.motivo}
+                </Aviso>
+              )}
+
+              {formularioAbierto ? (
+                <div className="mt-5 space-y-4 rounded-2xl bg-canvas p-4">
+                  <Campo
+                    etiqueta={
+                      formulario.tipo === "cierre" ? "Fecha de cierre" : "Altas permitidas hasta"
+                    }
+                  >
                     <input
                       type="date"
                       className={claseCampo}
                       value={fecha}
                       onChange={(e) => setFecha(e.target.value)}
+                      data-testid="campo-fecha-registro"
                     />
                   </Campo>
-                  <p className="text-xs text-gray-500">
-                    Esta acción congelará el plantel de {equiposCat.length} equipo(s). No podrás
-                    inscribir más jugadores en {categoria.nombre} después de confirmar.
-                  </p>
-                  <div className="flex gap-2">
-                    <Boton
-                      variante="peligro"
-                      onClick={() => {
-                        cerrarRegistroCategoria(categoria.id, fecha);
-                        setCategoriaActiva(null);
-                      }}
+                  {formulario.tipo === "ventana" && (
+                    <Campo
+                      etiqueta="Motivo de la ventana"
+                      ayuda="Queda registrado en la bitácora como aprobación del administrador."
                     >
-                      Confirmar cierre de registro
+                      <input
+                        className={claseCampo}
+                        value={motivo}
+                        onChange={(e) => setMotivo(e.target.value)}
+                        placeholder="Ej. Lesión de portero titular en Tigres del Valle"
+                        data-testid="campo-motivo-ventana"
+                      />
+                    </Campo>
+                  )}
+                  <p className="text-xs text-muted">
+                    {formulario.tipo === "cierre"
+                      ? `Esta acción congelará el plantel de ${equiposCat.length} equipo(s). No podrás inscribir más jugadores en ${categoria.nombre} salvo que abras una ventana extemporánea.`
+                      : `Durante la ventana, el administrador y los delegados de ${categoria.nombre} podrán dar de alta jugadores; cada alta queda marcada como extemporánea.`}
+                  </p>
+                  {error && <Aviso intencion="danger">{error}</Aviso>}
+                  <div className="flex flex-wrap gap-2">
+                    <Boton
+                      intencion={formulario.tipo === "cierre" ? "danger" : "warn"}
+                      onClick={() => confirmar(categoria)}
+                      data-testid={
+                        formulario.tipo === "cierre"
+                          ? "boton-confirmar-cierre"
+                          : "boton-confirmar-ventana"
+                      }
+                    >
+                      {formulario.tipo === "cierre"
+                        ? "Confirmar cierre de registro"
+                        : "Abrir ventana extemporánea"}
                     </Boton>
-                    <Boton variante="secundario" onClick={() => setCategoriaActiva(null)}>
+                    <Boton intencion="neutral" variante="contorno" onClick={() => setFormulario(null)}>
                       Cancelar
                     </Boton>
                   </div>
                 </div>
               ) : (
-                <div className="mt-3">
-                  <Boton
-                    variante="secundario"
-                    onClick={() => {
-                      setCategoriaActiva(categoria.id);
-                      setFecha(fechaHoy());
-                    }}
-                  >
-                    <Lock size={16} />
-                    Cerrar registro
-                  </Boton>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {!categoria.registroCerrado && (
+                    <Boton
+                      intencion="neutral"
+                      variante="contorno"
+                      onClick={() => abrirFormulario(categoria.id, "cierre")}
+                      data-testid={`boton-cerrar-registro-${categoria.id}`}
+                    >
+                      <Lock size={16} />
+                      Cerrar registro
+                    </Boton>
+                  )}
+                  {categoria.registroCerrado && estadoActual !== "extemporaneo" && (
+                    <Boton
+                      intencion="warn"
+                      variante="suave"
+                      onClick={() => abrirFormulario(categoria.id, "ventana")}
+                      data-testid={`boton-abrir-ventana-${categoria.id}`}
+                    >
+                      <CalendarClock size={16} />
+                      Abrir ventana extemporánea
+                    </Boton>
+                  )}
+                  {categoria.ventanaExtemporanea && (
+                    <Boton
+                      intencion="neutral"
+                      variante="contorno"
+                      onClick={() =>
+                        despachar({ tipo: "cerrarVentanaExtemporanea", categoriaId: categoria.id })
+                      }
+                      data-testid={`boton-cerrar-ventana-${categoria.id}`}
+                    >
+                      Cerrar ventana
+                    </Boton>
+                  )}
                 </div>
               )}
             </Tarjeta>

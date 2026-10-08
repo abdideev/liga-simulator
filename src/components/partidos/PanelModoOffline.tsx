@@ -1,6 +1,9 @@
 "use client";
 
 import { Loader2, Wifi, WifiOff } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+
+import Aviso from "@/components/ui/Aviso";
 
 export default function PanelModoOffline({
   activo,
@@ -14,40 +17,51 @@ export default function PanelModoOffline({
   onAlternar: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <label className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-(--color-border) bg-white px-3">
-        <span className="flex items-center gap-2 text-sm font-medium text-gray-800">
+    <div className="space-y-3">
+      <label className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl bg-canvas px-4">
+        <span className="flex items-center gap-2 text-sm font-medium text-ink">
           {activo ? (
-            <WifiOff size={16} className="text-(--color-warning)" />
+            <WifiOff size={18} className="text-warn-ink" />
           ) : (
-            <Wifi size={16} className="text-(--color-primary)" />
+            <Wifi size={18} className="text-ok-ink" />
           )}
-          Modo sin conexión
+          Modo sin conexión (simulado)
         </span>
         <input
           type="checkbox"
+          role="switch"
           checked={activo}
           disabled={sincronizando}
           onChange={onAlternar}
-          className="h-6 w-6"
+          aria-label="Modo sin conexión"
+          data-testid="toggle-modo-offline"
         />
       </label>
 
       {activo && (
-        <div className="rounded-lg border border-(--color-warning) bg-(--color-warning-light) px-3 py-2 text-sm font-medium text-(--color-warning)">
+        <Aviso intencion="warn" icono={WifiOff} data-testid="aviso-modo-offline">
           Estás capturando sin conexión a internet. Los eventos se guardan en este dispositivo.
           {pendientes > 0 && (
-            <span className="mt-1 block font-bold">{pendientes} evento(s) pendientes de sincronizar</span>
+            <span className="mt-1 block font-semibold" data-testid="contador-pendientes">
+              {pendientes} evento(s) pendientes de sincronizar
+            </span>
           )}
-        </div>
+        </Aviso>
       )}
 
+      <AnimatePresence>
       {sincronizando && (
-        <div className="flex items-center gap-2 rounded-lg border border-(--color-border) bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600">
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          className="flex items-center gap-2 rounded-2xl bg-canvas px-4 py-3 text-sm font-medium text-muted"
+        >
           <Loader2 size={16} className="animate-spin" />
           Sincronizando…
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

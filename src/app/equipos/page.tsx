@@ -2,17 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Plus, Users } from "lucide-react";
+import { ChevronRight, Lock, Plus } from "lucide-react";
 
 import { useSimulador } from "@/context/SimuladorContext";
+import { puedeVerPlantel } from "@/lib/permisos";
+import Avatar from "@/components/ui/Avatar";
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
 import Tarjeta from "@/components/ui/Tarjeta";
+import Etiqueta from "@/components/ui/Etiqueta";
 import EstadoVacio from "@/components/ui/EstadoVacio";
+import EncabezadoPagina from "@/components/ui/EncabezadoPagina";
+import { ICONO_SECCION } from "@/components/iconosSeccion";
 
 export default function EquiposPage() {
-  const { estado, crearEquipo } = useSimulador();
-  const { categorias, equipos, jugadores, rolActual } = estado;
+  const { estado, despachar } = useSimulador();
+  const { categorias, equipos, jugadores, rolActual, equipoDelegadoId } = estado;
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
 
   const [nombre, setNombre] = useState("");
@@ -23,21 +28,18 @@ export default function EquiposPage() {
 
   function manejarEnvio(e: React.FormEvent) {
     e.preventDefault();
-    if (!nombre.trim() || !categoriaId || !delegadoNombre.trim() || !delegadoTelefono.trim()) {
-      setError("Todos los campos son obligatorios");
-      return;
-    }
-    const categoria = categorias.find((c) => c.id === categoriaId);
-    const equiposEnCategoria = equipos.filter((e) => e.categoriaId === categoriaId).length;
-    if (categoria && equiposEnCategoria >= categoria.cupoEquipos) {
-      setError(`La categoría ${categoria.nombre} ya alcanzó su cupo de ${categoria.cupoEquipos} equipos`);
-      return;
-    }
-    crearEquipo({
-      nombre: nombre.trim(),
-      categoriaId,
-      delegado: { nombre: delegadoNombre.trim(), telefono: delegadoTelefono.trim() },
+    const resultado = despachar({
+      tipo: "crearEquipo",
+      datos: {
+        nombre,
+        categoriaId,
+        delegado: { nombre: delegadoNombre, telefono: delegadoTelefono },
+      },
     });
+    if (!resultado.ok) {
+      setError(resultado.motivo ?? "No se pudo registrar el equipo");
+      return;
+    }
     setNombre("");
     setDelegadoNombre("");
     setDelegadoTelefono("");
@@ -47,34 +49,31 @@ export default function EquiposPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
-            <Users className="text-(--color-primary)" size={22} />
-            Equipos
-          </h1>
-          <p className="text-sm text-gray-600">
-            {equipos.length} equipo(s) registrados en {categorias.length} categoría(s)
-          </p>
-        </div>
-        {rolActual === "administrador" && !mostrarNuevo && (
-          <Boton onClick={() => setMostrarNuevo(true)}>
-            <Plus size={16} />
-            Nuevo equipo
-          </Boton>
-        )}
-      </div>
+      <EncabezadoPagina
+        icono={ICONO_SECCION.equipos}
+        titulo="Equipos"
+        descripcion={`${equipos.length} equipo(s) registrados en ${categorias.length} categoría(s)`}
+        accion={
+          rolActual === "administrador" &&
+          !mostrarNuevo && (
+            <Boton onClick={() => setMostrarNuevo(true)} data-testid="boton-nuevo-equipo">
+              <Plus size={16} />
+              Nuevo equipo
+            </Boton>
+          )
+        }
+      />
 
       {mostrarNuevo && (
         <Tarjeta>
-          <h2 className="mb-3 font-semibold text-gray-900">Registrar equipo</h2>
-          <form onSubmit={manejarEnvio} className="space-y-3">
+          <h2 className="mb-4 font-semibold text-ink">Registrar equipo</h2>
+          <form onSubmit={manejarEnvio} className="space-y-4" data-testid="formulario-equipo">
             <Campo etiqueta="Nombre del equipo">
               <input
                 className={claseCampo}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                placeholder="Ej. Real Tlahuelilpan FC"
+                placeholder="Ej. Real Tulancingo FC"
               />
             </Campo>
             <Campo etiqueta="Categoría">
@@ -90,7 +89,7 @@ export default function EquiposPage() {
                 ))}
               </select>
             </Campo>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Campo etiqueta="Nombre del delegado">
                 <input
                   className={claseCampo}
@@ -103,14 +102,14 @@ export default function EquiposPage() {
                   className={claseCampo}
                   value={delegadoTelefono}
                   onChange={(e) => setDelegadoTelefono(e.target.value)}
-                  placeholder="771 123 4567"
+                  placeholder="775 123 4567"
                 />
               </Campo>
             </div>
-            {error && <p className="text-sm font-medium text-(--color-danger)">{error}</p>}
+            {error && <p className="text-sm font-medium text-danger-ink">{error}</p>}
             <div className="flex gap-2">
               <Boton type="submit">Registrar equipo</Boton>
-              <Boton type="button" variante="secundario" onClick={() => setMostrarNuevo(false)}>
+              <Boton intencion="neutral" variante="contorno" onClick={() => setMostrarNuevo(false)}>
                 Cancelar
               </Boton>
             </div>
@@ -120,7 +119,7 @@ export default function EquiposPage() {
 
       {equipos.length === 0 && !mostrarNuevo && (
         <EstadoVacio
-          icono={Users}
+          icono={ICONO_SECCION.equipos}
           titulo="Todavía no hay equipos registrados"
           descripcion="Registra el primer equipo de la liga para poder inscribir jugadores."
           accion={
@@ -138,32 +137,56 @@ export default function EquiposPage() {
         const equiposCat = equipos.filter((e) => e.categoriaId === categoria.id);
         if (equiposCat.length === 0) return null;
         return (
-          <div key={categoria.id}>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-              {categoria.nombre}
-            </h2>
-            <div className="space-y-2">
-              {equiposCat.map((equipo) => {
-                const plantel = jugadores.filter((j) => j.equipoId === equipo.id);
-                return (
-                  <Link key={equipo.id} href={`/equipos/${equipo.id}`}>
-                    <Tarjeta className="flex items-center justify-between transition-colors hover:border-(--color-primary)">
-                      <div>
-                        <p className="font-semibold text-gray-900">{equipo.nombre}</p>
-                        <p className="text-sm text-gray-600">
-                          Delegado: {equipo.delegado.nombre} · {equipo.delegado.telefono}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {plantel.length} / {categoria.limiteJugadoresPorPlantel} jugadores
-                        </p>
-                      </div>
-                      <ChevronRight className="shrink-0 text-gray-400" size={20} />
-                    </Tarjeta>
-                  </Link>
-                );
-              })}
+          <section key={categoria.id} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+                {categoria.nombre}
+              </h2>
+              <span className="text-xs text-muted">
+                {equiposCat.length} / {categoria.cupoEquipos} equipos
+              </span>
             </div>
-          </div>
+            {equiposCat.map((equipo) => {
+              const plantel = jugadores.filter((j) => j.equipoId === equipo.id);
+              const visible = puedeVerPlantel(rolActual, equipoDelegadoId, equipo.id);
+              const contenido = (
+                <Tarjeta
+                  interactiva={visible}
+                  className={`flex items-center justify-between gap-3 ${visible ? "" : "opacity-80"}`}
+                >
+                  <Avatar nombre={equipo.nombre} tamano="lg" />
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="font-semibold text-ink">{equipo.nombre}</p>
+                    <p className="text-sm text-muted">
+                      Delegado: {equipo.delegado.nombre} · {equipo.delegado.telefono}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {plantel.length} / {categoria.limiteJugadoresPorPlantel} jugadores
+                    </p>
+                  </div>
+                  {visible ? (
+                    <ChevronRight className="shrink-0 text-muted" size={20} />
+                  ) : (
+                    <Etiqueta icono={Lock}>Plantel privado</Etiqueta>
+                  )}
+                </Tarjeta>
+              );
+              return visible ? (
+                <Link
+                  key={equipo.id}
+                  href={`/equipos/${equipo.id}`}
+                  className="block"
+                  data-testid={`equipo-${equipo.id}`}
+                >
+                  {contenido}
+                </Link>
+              ) : (
+                <div key={equipo.id} data-testid={`equipo-${equipo.id}`}>
+                  {contenido}
+                </div>
+              );
+            })}
+          </section>
         );
       })}
     </div>

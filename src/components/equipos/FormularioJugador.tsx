@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { UserRound } from "lucide-react";
 
+import Aviso from "@/components/ui/Aviso";
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
-import { esMenorDeEdad } from "@/lib/rules";
+import { esMenorDeEdad, NUMERO_PLAYERA_MAX, NUMERO_PLAYERA_MIN } from "@/lib/rules";
+import type { ResultadoOperacion } from "@/lib/types";
 
 export interface DatosNuevoJugadorFormulario {
   nombreCompleto: string;
@@ -16,8 +19,11 @@ export interface DatosNuevoJugadorFormulario {
 
 export default function FormularioJugador({
   onGuardar,
+  plantelLleno,
 }: {
-  onGuardar: (datos: DatosNuevoJugadorFormulario) => { ok: boolean; motivo?: string };
+  onGuardar: (datos: DatosNuevoJugadorFormulario) => ResultadoOperacion;
+  /** Set when the roster already reached the category's limit. */
+  plantelLleno?: string;
 }) {
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
@@ -28,10 +34,7 @@ export default function FormularioJugador({
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
 
-  const esMenor = useMemo(
-    () => (fechaNacimiento ? esMenorDeEdad(fechaNacimiento) : false),
-    [fechaNacimiento]
-  );
+  const esMenor = fechaNacimiento ? esMenorDeEdad(fechaNacimiento) : false;
 
   function limpiar() {
     setNombreCompleto("");
@@ -45,22 +48,13 @@ export default function FormularioJugador({
   function manejarEnvio(e: React.FormEvent) {
     e.preventDefault();
     setExito(null);
-    if (!nombreCompleto.trim() || !fechaNacimiento || !curp.trim()) {
-      setError("Nombre, fecha de nacimiento y CURP son obligatorios");
-      return;
-    }
-    if (esMenor && (!consentimiento || !tutorNombre.trim())) {
-      setError(
-        "Para jugadores menores de edad se requiere el nombre del tutor y su consentimiento"
-      );
-      return;
-    }
-
+    // All business validation (required fields, roster limit, shirt number,
+    // guardian consent) lives in validarAccion; the form only reports it.
     const resultado = onGuardar({
-      nombreCompleto: nombreCompleto.trim(),
+      nombreCompleto,
       fechaNacimiento,
-      curp: curp.trim().toUpperCase(),
-      numero: numero ? Number(numero) : undefined,
+      curp,
+      numero: numero === "" ? undefined : Number(numero),
       tutor: esMenor ? { nombre: tutorNombre.trim(), consentimiento } : undefined,
     });
 
@@ -73,20 +67,26 @@ export default function FormularioJugador({
     limpiar();
   }
 
+  if (plantelLleno) {
+    return <Aviso intencion="warn">{plantelLleno}</Aviso>;
+  }
+
   return (
-    <form onSubmit={manejarEnvio} className="space-y-3">
+    <form onSubmit={manejarEnvio} className="space-y-4" data-testid="formulario-jugador">
       <div className="flex items-center gap-3">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-(--color-primary-light) text-sm font-bold text-(--color-primary-dark)">
-          {nombreCompleto
-            ? nombreCompleto
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((p) => p[0]?.toUpperCase())
-                .join("")
-            : "FOTO"}
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent-ink">
+          {nombreCompleto.trim() ? (
+            nombreCompleto
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((p) => p[0]?.toUpperCase())
+              .join("")
+          ) : (
+            <UserRound size={22} />
+          )}
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted">
           Marcador de fotografía. La carga de imágenes no aplica en este prototipo.
         </p>
       </div>
@@ -97,6 +97,7 @@ export default function FormularioJugador({
           value={nombreCompleto}
           onChange={(e) => setNombreCompleto(e.target.value)}
           placeholder="Nombre y apellidos"
+          data-testid="campo-nombre-jugador"
         />
       </Campo>
 
@@ -107,16 +108,18 @@ export default function FormularioJugador({
             className={claseCampo}
             value={fechaNacimiento}
             onChange={(e) => setFechaNacimiento(e.target.value)}
+            data-testid="campo-fecha-nacimiento"
           />
         </Campo>
-        <Campo etiqueta="Número (opcional)">
+        <Campo etiqueta="Número (opcional)" ayuda={`Entre ${NUMERO_PLAYERA_MIN} y ${NUMERO_PLAYERA_MAX}, sin repetir`}>
           <input
             type="number"
-            min={1}
-            max={99}
+            min={NUMERO_PLAYERA_MIN}
+            max={NUMERO_PLAYERA_MAX}
             className={claseCampo}
             value={numero}
             onChange={(e) => setNumero(e.target.value)}
+            data-testid="campo-numero"
           />
         </Campo>
       </div>
@@ -128,12 +131,16 @@ export default function FormularioJugador({
           maxLength={18}
           onChange={(e) => setCurp(e.target.value.toUpperCase())}
           placeholder="18 caracteres"
+          data-testid="campo-curp"
         />
       </Campo>
 
       {esMenor && (
-        <div className="space-y-2 rounded-lg border border-(--color-warning) bg-(--color-warning-light) p-3">
-          <p className="text-sm font-semibold text-(--color-warning)">
+        <div
+          className="space-y-3 rounded-2xl bg-warn-soft p-4"
+          data-testid="bloque-tutor"
+        >
+          <p className="text-sm font-semibold text-warn-ink">
             Jugador menor de edad — se requiere consentimiento del tutor
           </p>
           <Campo etiqueta="Nombre del tutor">
@@ -141,25 +148,31 @@ export default function FormularioJugador({
               className={claseCampo}
               value={tutorNombre}
               onChange={(e) => setTutorNombre(e.target.value)}
+              data-testid="campo-nombre-tutor"
             />
           </Campo>
-          <label className="flex min-h-11 items-center gap-2 text-sm text-gray-800">
+          <label className="flex min-h-11 items-center gap-2.5 text-sm text-ink">
             <input
               type="checkbox"
               checked={consentimiento}
               onChange={(e) => setConsentimiento(e.target.checked)}
+              data-testid="casilla-consentimiento"
             />
             El tutor otorga su consentimiento para la participación del menor
           </label>
         </div>
       )}
 
-      {error && <p className="text-sm font-medium text-(--color-danger)">{error}</p>}
-      {exito && (
-        <p className="text-sm font-medium text-(--color-primary-dark)">{exito}</p>
+      {error && (
+        <Aviso intencion="danger" data-testid="error-inscripcion">
+          {error}
+        </Aviso>
       )}
+      {exito && <Aviso intencion="ok">{exito}</Aviso>}
 
-      <Boton type="submit">Inscribir jugador</Boton>
+      <Boton type="submit" data-testid="boton-inscribir-jugador">
+        Inscribir jugador
+      </Boton>
     </form>
   );
 }

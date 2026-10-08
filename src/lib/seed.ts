@@ -1,19 +1,23 @@
 // Seed data for the Liga Simulator prototype. Everything here is fictional
-// and generated deterministically so "Reiniciar simulación" always restores
-// the exact same starting point.
+// and generated deterministically from a reference date: the calendar is
+// anchored so that Jornada 1 was played two weeks ago and Jornada 2 is
+// scheduled for the reference date ("today" in the running app).
 
 import { generarCalendarioRoundRobin } from "./calendario";
+import { fechaISOLocal, sumarDiasISO } from "./fechas";
+import { crearGeneradorSecuencial, type CrearId } from "./ids";
 import type {
   BitacoraEntry,
   Categoria,
   Equipo,
+  EventoPartido,
   Jugador,
   Liga,
   Partido,
   SimuladorState,
   Temporada,
 } from "./types";
-import { calcularElegibilidad, esMenorDeEdad } from "./rules";
+import { calcularElegibilidad, esMenorDeEdad, estadoEfectivo, recalcularMarcador } from "./rules";
 
 const NOMBRES = [
   "José Luis", "Carlos", "Miguel Ángel", "Juan Pablo", "Alejandro",
@@ -129,68 +133,48 @@ function generarEspecificacionesJugadores(
   return resultado;
 }
 
-interface FabricaIds {
-  liga: () => string;
-  temporada: () => string;
-  categoria: () => string;
-  equipo: () => string;
-  jugador: () => string;
-  partido: () => string;
-  evento: () => string;
-  bitacora: () => string;
-}
-
-function crearFabricaIds(): FabricaIds {
-  const contadores: Record<string, number> = {};
-  const fabrica =
-    (prefijo: string) =>
-    (): string => {
-      contadores[prefijo] = (contadores[prefijo] ?? 0) + 1;
-      return `${prefijo}-${contadores[prefijo]}`;
-    };
+function crearFabricaIds(crearId: CrearId) {
   return {
-    liga: fabrica("liga"),
-    temporada: fabrica("temp"),
-    categoria: fabrica("cat"),
-    equipo: fabrica("equipo"),
-    jugador: fabrica("jugador"),
-    partido: fabrica("partido"),
-    evento: fabrica("evento"),
-    bitacora: fabrica("bitacora"),
+    liga: () => crearId("liga"),
+    temporada: () => crearId("temp"),
+    categoria: () => crearId("cat"),
+    equipo: () => crearId("equipo"),
+    jugador: () => crearId("jugador"),
+    partido: () => crearId("partido"),
+    evento: () => crearId("evento"),
+    bitacora: () => crearId("bitacora"),
   };
 }
+
+type FabricaIds = ReturnType<typeof crearFabricaIds>;
 
 function crearJugador(
   ids: FabricaIds,
   equipoId: string,
   categoria: Categoria,
   spec: EspecificacionJugador,
-  opciones?: { curpForzada?: string; tutorForzado?: { nombre: string; consentimiento: boolean } }
+  referencia: Date
 ): Jugador {
-  const curp = opciones?.curpForzada ?? spec.curp;
-  const { estado, motivoRevision } = calcularElegibilidad(spec.fechaNacimiento, curp, categoria);
-  const esMenor = esMenorDeEdad(spec.fechaNacimiento);
+  const { estado, motivoRevision } = calcularElegibilidad(spec.fechaNacimiento, spec.curp, categoria);
+  const esMenor = esMenorDeEdad(spec.fechaNacimiento, referencia);
 
   return {
     id: ids.jugador(),
     equipoId,
     nombreCompleto: spec.nombreCompleto,
     fechaNacimiento: spec.fechaNacimiento,
-    curp,
+    curp: spec.curp,
     numero: spec.numero,
     estadoElegibilidad: estado,
     motivoRevision,
-    esMenorDeEdad: esMenor,
-    tutor:
-      opciones?.tutorForzado ??
-      (esMenor
-        ? {
-            nombre: `${NOMBRES_TUTORES[spec.numero % NOMBRES_TUTORES.length]} ${
-              APELLIDOS[(spec.numero * 2 + 3) % APELLIDOS.length]
-            }`,
-            consentimiento: true,
-          }
-        : undefined),
+    tutor: esMenor
+      ? {
+          nombre: `${NOMBRES_TUTORES[spec.numero % NOMBRES_TUTORES.length]} ${
+            APELLIDOS[(spec.numero * 2 + 3) % APELLIDOS.length]
+          }`,
+          consentimiento: true,
+        }
+      : undefined,
   };
 }
 
@@ -198,12 +182,26 @@ function bitacoraSeed(ids: FabricaIds, entradas: Array<Omit<BitacoraEntry, "id">
   return entradas.map((entrada) => ({ id: ids.bitacora(), ...entrada }));
 }
 
-export function crearEstadoInicial(): SimuladorState {
-  const ids = crearFabricaIds();
+/** Local datetime (YYYY-MM-DD + HH:mm) as an ISO instant, for seeded audit entries. */
+function instante(fechaISO: string, hora: string): string {
+  return new Date(`${fechaISO}T${hora}:00`).toISOString();
+}
+
+/**
+ * Deterministic for a given `referencia` and ID generator: same inputs,
+ * same league, players, calendar, results and audit trail.
+ */
+export function crearEstadoInicial(
+  referencia: Date = new Date(),
+  crearId: CrearId = crearGeneradorSecuencial()
+): SimuladorState {
+  const ids = crearFabricaIds(crearId);
+  const hoy = fechaISOLocal(referencia);
+  const fechaJornada1 = sumarDiasISO(hoy, -14);
 
   const liga: Liga = {
     id: ids.liga(),
-    nombre: "Liga Municipal de Tlahuelilpan",
+    nombre: "Liga Municipal de Tulancingo",
     temporadaActivaId: "",
   };
 
@@ -238,45 +236,45 @@ export function crearEstadoInicial(): SimuladorState {
 
   const categorias: Categoria[] = [categoriaLibre, categoriaJuvenil];
 
-  const equipoRealTlahuelilpan: Equipo = {
+  const equipoRealTulancingo: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
-    nombre: "Real Tlahuelilpan FC",
-    delegado: { nombre: "Javier Hernández Soto", telefono: "771 123 4567" },
+    nombre: "Real Tulancingo FC",
+    delegado: { nombre: "Javier Hernández Soto", telefono: "775 123 4567" },
   };
   const equipoCuauhtemoc: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
     nombre: "Deportivo Cuauhtémoc",
-    delegado: { nombre: "Miguel Ángel Reyes Cruz", telefono: "771 234 5678" },
+    delegado: { nombre: "Miguel Ángel Reyes Cruz", telefono: "775 234 5678" },
   };
   const equipoAtleticoMinero: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaLibre.id,
     nombre: "Atlético Minero",
-    delegado: { nombre: "Roberto Carlos Mendoza", telefono: "772 345 6789" },
+    delegado: { nombre: "Roberto Carlos Mendoza", telefono: "775 345 6789" },
   };
   const equipoHalcones: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
-    nombre: "Halcones de Tlahuelilpan",
-    delegado: { nombre: "Laura Patricia Gómez", telefono: "771 456 7890" },
+    nombre: "Halcones de Tulancingo",
+    delegado: { nombre: "Laura Patricia Gómez", telefono: "775 456 7890" },
   };
   const equipoTigres: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
     nombre: "Tigres del Valle",
-    delegado: { nombre: "Fernando Islas Ramírez", telefono: "771 567 8901" },
+    delegado: { nombre: "Fernando Islas Ramírez", telefono: "775 567 8901" },
   };
   const equipoAguilas: Equipo = {
     id: ids.equipo(),
     categoriaId: categoriaJuvenil.id,
     nombre: "Águilas Doradas",
-    delegado: { nombre: "Sandra Luz Martínez", telefono: "772 678 9012" },
+    delegado: { nombre: "Sandra Luz Martínez", telefono: "775 678 9012" },
   };
 
   const equipos: Equipo[] = [
-    equipoRealTlahuelilpan,
+    equipoRealTulancingo,
     equipoCuauhtemoc,
     equipoAtleticoMinero,
     equipoHalcones,
@@ -291,7 +289,7 @@ export function crearEstadoInicial(): SimuladorState {
   const jugadores: Jugador[] = [];
 
   const equiposLibre: Array<[Equipo, number]> = [
-    [equipoRealTlahuelilpan, 1],
+    [equipoRealTulancingo, 1],
     [equipoCuauhtemoc, 2],
     [equipoAtleticoMinero, 3],
   ];
@@ -299,7 +297,7 @@ export function crearEstadoInicial(): SimuladorState {
 
   for (const [equipo, semilla] of equiposLibre) {
     const specs = generarEspecificacionesJugadores(12, aniosLibre, semilla);
-    const roster = specs.map((spec) => crearJugador(ids, equipo.id, categoriaLibre, spec));
+    const roster = specs.map((spec) => crearJugador(ids, equipo.id, categoriaLibre, spec, referencia));
     rosterPorEquipo.set(equipo.id, roster);
     jugadores.push(...roster);
   }
@@ -311,7 +309,7 @@ export function crearEstadoInicial(): SimuladorState {
   ];
   for (const [equipo, semilla] of equiposJuvenil) {
     const specs = generarEspecificacionesJugadores(12, aniosJuvenil, semilla);
-    const roster = specs.map((spec) => crearJugador(ids, equipo.id, categoriaJuvenil, spec));
+    const roster = specs.map((spec) => crearJugador(ids, equipo.id, categoriaJuvenil, spec, referencia));
     rosterPorEquipo.set(equipo.id, roster);
     jugadores.push(...roster);
   }
@@ -331,15 +329,15 @@ export function crearEstadoInicial(): SimuladorState {
 
   // --- Calendar: single round-robin per category ----------------------------
   const sedes = [
-    "Unidad Deportiva Tlahuelilpan",
+    "Unidad Deportiva Tulancingo",
     "Campo Municipal No. 2",
     "Cancha Ejido La Providencia",
   ];
 
   const partidosLibre = generarCalendarioRoundRobin({
     categoriaId: categoriaLibre.id,
-    equipoIds: [equipoRealTlahuelilpan.id, equipoCuauhtemoc.id, equipoAtleticoMinero.id],
-    fechaInicio: "2026-08-06",
+    equipoIds: [equipoRealTulancingo.id, equipoCuauhtemoc.id, equipoAtleticoMinero.id],
+    fechaInicio: fechaJornada1,
     diasEntreJornadas: 14,
     horaDefault: "17:00",
     sedes,
@@ -349,7 +347,7 @@ export function crearEstadoInicial(): SimuladorState {
   const partidosJuvenil = generarCalendarioRoundRobin({
     categoriaId: categoriaJuvenil.id,
     equipoIds: [equipoHalcones.id, equipoTigres.id, equipoAguilas.id],
-    fechaInicio: "2026-08-06",
+    fechaInicio: fechaJornada1,
     diasEntreJornadas: 14,
     horaDefault: "11:00",
     sedes,
@@ -359,70 +357,49 @@ export function crearEstadoInicial(): SimuladorState {
   const partidos: Partido[] = [...partidosLibre, ...partidosJuvenil];
 
   // --- Finalize jornada 1 of each category so standings aren't empty --------
+  // With three teams the round-robin gives jornada 1 to teams 2 and 3 (team 1
+  // rests), so every name below is read from the generated match, never assumed.
+  const convocarElegibles = (roster: Jugador[]) =>
+    roster.filter((j) => estadoEfectivo(j) === "Elegible").slice(0, 11).map((j) => j.id);
+
+  function cerrarJornada1(
+    partido: Partido,
+    eventos: Array<Omit<EventoPartido, "id" | "partidoId">>
+  ): void {
+    const convocadosLocal = convocarElegibles(rosterPorEquipo.get(partido.equipoLocalId)!);
+    const convocadosVisitante = convocarElegibles(rosterPorEquipo.get(partido.equipoVisitanteId)!);
+    partido.estado = "finalizado";
+    partido.convocadosLocal = convocadosLocal;
+    partido.convocadosVisitante = convocadosVisitante;
+    partido.titularesLocal = [...convocadosLocal];
+    partido.titularesVisitante = [...convocadosVisitante];
+    partido.eventos = eventos.map((e) => ({ ...e, id: ids.evento(), partidoId: partido.id }));
+    Object.assign(
+      partido,
+      recalcularMarcador(partido.eventos, partido.equipoLocalId, partido.equipoVisitanteId)
+    );
+    partido.actaCerrada = true;
+    partido.confirmacionDelegadoLocal = true;
+    partido.confirmacionDelegadoVisitante = true;
+  }
+
   const jornada1Libre = partidos.find(
     (p) => p.categoriaId === categoriaLibre.id && p.jornada === 1
   )!;
   const localesLibre = rosterPorEquipo.get(jornada1Libre.equipoLocalId)!;
   const visitantesLibre = rosterPorEquipo.get(jornada1Libre.equipoVisitanteId)!;
 
-  jornada1Libre.estado = "finalizado";
-  jornada1Libre.convocadosLocal = localesLibre.slice(0, 11).map((j) => j.id);
-  jornada1Libre.convocadosVisitante = visitantesLibre.slice(0, 11).map((j) => j.id);
-  jornada1Libre.eventos = [
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 12,
-      tipo: "gol",
-      equipoId: jornada1Libre.equipoLocalId,
-      jugadorId: localesLibre[8].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 34,
-      tipo: "tarjeta_amarilla",
-      equipoId: jornada1Libre.equipoVisitanteId,
-      jugadorId: visitantesLibre[3].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 45,
-      tipo: "gol",
-      equipoId: jornada1Libre.equipoLocalId,
-      jugadorId: localesLibre[9].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 58,
-      tipo: "gol",
-      equipoId: jornada1Libre.equipoVisitanteId,
-      jugadorId: visitantesLibre[8].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 70,
-      tipo: "tarjeta_amarilla",
-      equipoId: jornada1Libre.equipoLocalId,
-      jugadorId: localesLibre[2].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Libre.id,
-      minuto: 82,
-      tipo: "gol",
-      equipoId: jornada1Libre.equipoLocalId,
-      jugadorId: localesLibre[10].id,
-    },
-  ];
-  jornada1Libre.golesLocal = 3;
-  jornada1Libre.golesVisitante = 1;
-  jornada1Libre.actaCerrada = true;
-  jornada1Libre.confirmacionDelegadoLocal = true;
-  jornada1Libre.confirmacionDelegadoVisitante = true;
+  cerrarJornada1(jornada1Libre, [
+    { minuto: 12, tipo: "gol", equipoId: jornada1Libre.equipoLocalId, jugadorId: localesLibre[8].id },
+    { minuto: 34, tipo: "tarjeta_amarilla", equipoId: jornada1Libre.equipoVisitanteId, jugadorId: visitantesLibre[3].id },
+    { minuto: 45, tipo: "gol", equipoId: jornada1Libre.equipoLocalId, jugadorId: localesLibre[9].id },
+    { minuto: 58, tipo: "gol", equipoId: jornada1Libre.equipoVisitanteId, jugadorId: visitantesLibre[8].id },
+    { minuto: 70, tipo: "tarjeta_amarilla", equipoId: jornada1Libre.equipoLocalId, jugadorId: localesLibre[2].id },
+    { minuto: 82, tipo: "gol", equipoId: jornada1Libre.equipoLocalId, jugadorId: localesLibre[10].id },
+    // The visiting team plays again in jornada 2 (today), so this player
+    // shows up blocked in today's mesa de control.
+    { minuto: 88, tipo: "tarjeta_roja", equipoId: jornada1Libre.equipoVisitanteId, jugadorId: visitantesLibre[6].id },
+  ]);
 
   const jornada1Juvenil = partidos.find(
     (p) => p.categoriaId === categoriaJuvenil.id && p.jornada === 1
@@ -430,102 +407,60 @@ export function crearEstadoInicial(): SimuladorState {
   const localesJuvenil = rosterPorEquipo.get(jornada1Juvenil.equipoLocalId)!;
   const visitantesJuvenil = rosterPorEquipo.get(jornada1Juvenil.equipoVisitanteId)!;
 
-  jornada1Juvenil.estado = "finalizado";
-  jornada1Juvenil.convocadosLocal = localesJuvenil.slice(0, 11).map((j) => j.id);
-  jornada1Juvenil.convocadosVisitante = visitantesJuvenil.slice(0, 11).map((j) => j.id);
-  jornada1Juvenil.eventos = [
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 8,
-      tipo: "gol",
-      equipoId: jornada1Juvenil.equipoLocalId,
-      jugadorId: localesJuvenil[7].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 20,
-      tipo: "tarjeta_amarilla",
-      equipoId: jornada1Juvenil.equipoVisitanteId,
-      jugadorId: visitantesJuvenil[5].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 33,
-      tipo: "autogol",
-      equipoId: jornada1Juvenil.equipoLocalId,
-      jugadorId: localesJuvenil[1].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 50,
-      tipo: "gol",
-      equipoId: jornada1Juvenil.equipoVisitanteId,
-      jugadorId: visitantesJuvenil[9].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 65,
-      tipo: "tarjeta_roja",
-      equipoId: jornada1Juvenil.equipoLocalId,
-      jugadorId: localesJuvenil[4].id,
-    },
-    {
-      id: ids.evento(),
-      partidoId: jornada1Juvenil.id,
-      minuto: 77,
-      tipo: "gol",
-      equipoId: jornada1Juvenil.equipoLocalId,
-      jugadorId: localesJuvenil[7].id,
-    },
-  ];
-  jornada1Juvenil.golesLocal = 2;
-  jornada1Juvenil.golesVisitante = 2;
-  jornada1Juvenil.actaCerrada = true;
-  jornada1Juvenil.confirmacionDelegadoLocal = true;
-  jornada1Juvenil.confirmacionDelegadoVisitante = true;
+  cerrarJornada1(jornada1Juvenil, [
+    { minuto: 8, tipo: "gol", equipoId: jornada1Juvenil.equipoLocalId, jugadorId: localesJuvenil[7].id },
+    { minuto: 20, tipo: "tarjeta_amarilla", equipoId: jornada1Juvenil.equipoVisitanteId, jugadorId: visitantesJuvenil[5].id },
+    { minuto: 33, tipo: "autogol", equipoId: jornada1Juvenil.equipoLocalId, jugadorId: localesJuvenil[1].id },
+    { minuto: 50, tipo: "gol", equipoId: jornada1Juvenil.equipoVisitanteId, jugadorId: visitantesJuvenil[9].id },
+    // The local team rests in jornada 2: the suspension must carry over to
+    // its next match (jornada 3), not expire with the jornada number.
+    { minuto: 65, tipo: "tarjeta_roja", equipoId: jornada1Juvenil.equipoLocalId, jugadorId: localesJuvenil[4].id },
+    { minuto: 77, tipo: "gol", equipoId: jornada1Juvenil.equipoLocalId, jugadorId: localesJuvenil[7].id },
+  ]);
 
   // --- Audit trail seed -------------------------------------------------------
+  const nombre = (equipoId: string) => equipos.find((e) => e.id === equipoId)!.nombre;
+  const resumenActa = (p: Partido) =>
+    `${nombre(p.equipoLocalId)} ${p.golesLocal} - ${p.golesVisitante} ${nombre(p.equipoVisitanteId)}`;
+
   const bitacora = bitacoraSeed(ids, [
     {
-      fecha: "2026-07-15T09:00:00.000Z",
+      fecha: instante(sumarDiasISO(hoy, -40), "09:00"),
       rol: "administrador",
       accion: "Creación de liga y temporada",
-      detalle: "Liga Municipal de Tlahuelilpan — Temporada Apertura 2026",
+      detalle: `${liga.nombre} — ${temporada.nombre}`,
     },
     {
-      fecha: "2026-07-16T10:30:00.000Z",
+      fecha: instante(sumarDiasISO(hoy, -38), "10:30"),
       rol: "administrador",
       accion: "Registro de equipos",
-      detalle: "6 equipos registrados en las categorías Libre y Juvenil Sub-17",
+      detalle: `${equipos.length} equipos registrados en las categorías ${categoriaLibre.nombre} y ${categoriaJuvenil.nombre}`,
     },
     {
-      fecha: "2026-07-20T12:00:00.000Z",
+      fecha: instante(sumarDiasISO(hoy, -30), "12:00"),
       rol: "administrador",
       accion: "Inscripción de jugadores",
-      detalle: "72 jugadores inscritos en total",
+      detalle: `${jugadores.length} jugadores inscritos en total`,
     },
     {
-      fecha: "2026-07-25T15:00:00.000Z",
+      fecha: instante(sumarDiasISO(hoy, -21), "15:00"),
       rol: "administrador",
       accion: "Generación de calendario",
-      detalle: "Calendario round-robin generado para ambas categorías",
+      detalle: "Calendario todos contra todos generado para ambas categorías",
     },
     {
-      fecha: "2026-08-06T23:10:00.000Z",
+      fecha: instante(jornada1Juvenil.fecha, "12:40"),
       rol: "administrador",
-      accion: "Cierre de acta — Jornada 1 (Libre)",
-      detalle: `${equipoRealTlahuelilpan.nombre} 3 - 1 ${equipoCuauhtemoc.nombre}`,
+      accion: `Cierre de acta — Jornada 1 (${categoriaJuvenil.nombre})`,
+      detalle: resumenActa(jornada1Juvenil),
+      referencias: { partidoId: jornada1Juvenil.id },
     },
     {
-      fecha: "2026-08-06T21:40:00.000Z",
+      fecha: instante(jornada1Libre.fecha, "18:50"),
       rol: "administrador",
-      accion: "Cierre de acta — Jornada 1 (Juvenil Sub-17)",
-      detalle: `${equipoHalcones.nombre} 2 - 2 ${equipoTigres.nombre}`,
+      accion: `Cierre de acta — Jornada 1 (${categoriaLibre.nombre})`,
+      detalle: resumenActa(jornada1Libre),
+      referencias: { partidoId: jornada1Libre.id },
     },
   ]);
 
@@ -538,5 +473,7 @@ export function crearEstadoInicial(): SimuladorState {
     partidos,
     bitacora,
     rolActual: "administrador",
+    equipoDelegadoId: equipos[0].id,
+    mesas: {},
   };
 }

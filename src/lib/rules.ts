@@ -1,16 +1,19 @@
 // Pure, testable business rules: eligibility, standings, suspensions.
-// No React, no localStorage, no side effects.
+// No React, no localStorage, no side effects. Anything time-dependent takes
+// an injectable `referencia` date.
 
 import type {
   Categoria,
-  Equipo,
   EstadisticaJugador,
   EstadoElegibilidad,
   EventoPartido,
   Jugador,
+  Lado,
   Partido,
+  ResultadoOperacion,
   TablaPosicion,
 } from "./types";
+import { parsearFechaLocal } from "./fechas";
 
 // ---------------------------------------------------------------------------
 // CURP structural validation (NOT a real government lookup)
@@ -45,7 +48,7 @@ export function validarEstructuraCurp(
     return { valida: false, motivo: "El formato de la CURP no es válido" };
   }
 
-  const fecha = new Date(`${fechaNacimiento}T00:00:00`);
+  const fecha = parsearFechaLocal(fechaNacimiento);
   if (Number.isNaN(fecha.getTime())) {
     return { valida: false, motivo: "Fecha de nacimiento inválida" };
   }
@@ -73,7 +76,7 @@ export function validarEstructuraCurp(
 // ---------------------------------------------------------------------------
 
 export function calcularEdad(fechaNacimiento: string, referencia: Date = new Date()): number {
-  const nacimiento = new Date(`${fechaNacimiento}T00:00:00`);
+  const nacimiento = parsearFechaLocal(fechaNacimiento);
   let edad = referencia.getFullYear() - nacimiento.getFullYear();
   const cumplioEsteAnio =
     referencia.getMonth() > nacimiento.getMonth() ||
@@ -83,8 +86,9 @@ export function calcularEdad(fechaNacimiento: string, referencia: Date = new Dat
   return edad;
 }
 
-export function esMenorDeEdad(fechaNacimiento: string): boolean {
-  return calcularEdad(fechaNacimiento) < 18;
+/** Derived on every read so a player stops being a minor on their 18th birthday. */
+export function esMenorDeEdad(fechaNacimiento: string, referencia: Date = new Date()): boolean {
+  return calcularEdad(fechaNacimiento, referencia) < 18;
 }
 
 export interface ResultadoElegibilidad {
@@ -96,6 +100,9 @@ export interface ResultadoElegibilidad {
  * Determines eligibility status. CURP inconsistencies always take
  * precedence and route to manual review, since age cannot be trusted
  * from a self-reported date alone.
+ *
+ * Eligibility compares the birth YEAR only, not the exact date. This is a
+ * business decision pending confirmation with the client's regulations.
  */
 export function calcularElegibilidad(
   fechaNacimiento: string,
@@ -110,7 +117,7 @@ export function calcularElegibilidad(
     };
   }
 
-  const anioNacimiento = new Date(`${fechaNacimiento}T00:00:00`).getFullYear();
+  const anioNacimiento = parsearFechaLocal(fechaNacimiento).getFullYear();
   if (
     anioNacimiento < categoria.anioNacimientoMin ||
     anioNacimiento > categoria.anioNacimientoMax
@@ -123,10 +130,48 @@ export function calcularElegibilidad(
 
 /** Effective status a screen should display, honoring an admin override if present. */
 export function estadoEfectivo(jugador: Jugador): EstadoElegibilidad {
-  if (jugador.overrideAdmin) {
-    return jugador.overrideAdmin.elegibleForzado ? "Elegible" : jugador.estadoElegibilidad;
-  }
+  if (jugador.overrideAdmin?.elegibleForzado) return "Elegible";
   return jugador.estadoElegibilidad;
+}
+
+export const NUMERO_PLAYERA_MIN = 1;
+export const NUMERO_PLAYERA_MAX = 99;
+
+/** Shirt numbers are optional, but when present must be 1–99 and unique within the roster. */
+export function validarNumeroPlayera(
+  numero: number | undefined,
+  plantel: Jugador[],
+  excluirJugadorId?: string
+): ResultadoOperacion {
+  if (numero === undefined) return { ok: true };
+  if (!Number.isInteger(numero) || numero < NUMERO_PLAYERA_MIN || numero > NUMERO_PLAYERA_MAX) {
+    return {
+      ok: false,
+      motivo: `El número debe ser un entero entre ${NUMERO_PLAYERA_MIN} y ${NUMERO_PLAYERA_MAX}`,
+    };
+  }
+  const repetido = plantel.find((j) => j.numero === numero && j.id !== excluirJugadorId);
+  if (repetido) {
+    return { ok: false, motivo: `El número ${numero} ya lo usa ${repetido.nombreCompleto}` };
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Registration window
+// ---------------------------------------------------------------------------
+
+export type EstadoRegistro = "abierto" | "extemporaneo" | "cerrado";
+
+/**
+ * Whether a category accepts new players on `hoy` (YYYY-MM-DD). After the
+ * regular close, an admin-approved late window can reopen it until `hasta`.
+ */
+export function estadoRegistro(categoria: Categoria, hoy: string): EstadoRegistro {
+  if (!categoria.registroCerrado) return "abierto";
+  const ventana = categoria.ventanaExtemporanea;
+  if (ventana && hoy >= ventana.abiertaEl && hoy <= ventana.hasta) return "extemporaneo";
+  return "cerrado";
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +199,21 @@ export function recalcularMarcador(
     }
   }
   return { golesLocal, golesVisitante };
+}
+
+// ---------------------------------------------------------------------------
+// Acta (match report) sign-off
+// ---------------------------------------------------------------------------
+
+/** A side has signed the acta when its delegate either confirmed or filed a protest. */
+export function ladoFirmoActa(partido: Partido, lado: Lado): boolean {
+  return lado === "local"
+    ? partido.confirmacionDelegadoLocal || !!partido.protestaLocal
+    : partido.confirmacionDelegadoVisitante || !!partido.protestaVisitante;
+}
+
+export function tieneProtesta(partido: Partido): boolean {
+  return !!partido.protestaLocal || !!partido.protestaVisitante;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,19 +343,124 @@ export function calcularTabla(
 }
 
 // ---------------------------------------------------------------------------
-// Player statistics and suspensions
+// Suspensions
 // ---------------------------------------------------------------------------
+
+export const AMARILLAS_PARA_SUSPENSION = 5;
+
+export interface ResultadoSuspension {
+  suspendido: boolean;
+  motivo?: string;
+}
 
 function eventosDeJugador(eventos: EventoPartido[], jugadorId: string): EventoPartido[] {
   return eventos.filter((e) => e.jugadorId === jugadorId);
 }
 
+/** A team's matches in playing order (jornada, then date). */
+export function partidosDelEquipo(equipoId: string, partidos: Partido[]): Partido[] {
+  return partidos
+    .filter((p) => p.equipoLocalId === equipoId || p.equipoVisitanteId === equipoId)
+    .sort((a, b) => a.jornada - b.jornada || a.fecha.localeCompare(b.fecha));
+}
+
+/**
+ * Whether a player still owes a suspension after the team's finalized
+ * matches played before `antesDeJornada` (all of them by default).
+ *
+ * A red card, or reaching 5 accumulated yellow cards, suspends the player
+ * for the TEAM's next match — not for the next jornada number of the
+ * category. A jornada where the team rests (bye) does not count as served.
+ */
+export function calcularSuspension(
+  jugadorId: string,
+  equipoId: string,
+  partidos: Partido[],
+  antesDeJornada: number = Number.POSITIVE_INFINITY
+): ResultadoSuspension {
+  const previos = partidosDelEquipo(equipoId, partidos).filter(
+    (p) => p.estado === "finalizado" && p.jornada < antesDeJornada
+  );
+
+  let partidosPorCumplir = 0;
+  let motivo = "";
+  let amarillasAcumuladas = 0;
+
+  for (const partido of previos) {
+    if (partidosPorCumplir > 0) {
+      // The player sat out this team match: suspension served.
+      partidosPorCumplir -= 1;
+      continue;
+    }
+
+    const eventosJugador = eventosDeJugador(partido.eventos, jugadorId);
+    if (eventosJugador.some((e) => e.tipo === "tarjeta_roja")) {
+      partidosPorCumplir = 1;
+      motivo = "Tarjeta roja directa";
+      continue;
+    }
+
+    amarillasAcumuladas += eventosJugador.filter((e) => e.tipo === "tarjeta_amarilla").length;
+    if (amarillasAcumuladas >= AMARILLAS_PARA_SUSPENSION) {
+      partidosPorCumplir = 1;
+      motivo = `Acumulación de ${AMARILLAS_PARA_SUSPENSION} tarjetas amarillas`;
+      amarillasAcumuladas -= AMARILLAS_PARA_SUSPENSION;
+    }
+  }
+
+  return partidosPorCumplir > 0 ? { suspendido: true, motivo } : { suspendido: false };
+}
+
+/** Single criterion used everywhere: is the player suspended for this specific match? */
+export function calcularSuspensionParaPartido(
+  jugadorId: string,
+  equipoId: string,
+  partido: Partido,
+  partidos: Partido[]
+): ResultadoSuspension {
+  return calcularSuspension(jugadorId, equipoId, partidos, partido.jornada);
+}
+
+/**
+ * Whether a player may be called up for a match: they must be effectively
+ * eligible (or admin-overridden) and not serving a suspension.
+ */
+export function puedeSerConvocado(
+  jugador: Jugador,
+  partido: Partido,
+  partidos: Partido[]
+): ResultadoOperacion {
+  const estado = estadoEfectivo(jugador);
+  if (estado !== "Elegible") {
+    return { ok: false, motivo: estado };
+  }
+  const suspension = calcularSuspensionParaPartido(jugador.id, jugador.equipoId, partido, partidos);
+  if (suspension.suspendido) {
+    return { ok: false, motivo: `Suspendido — ${suspension.motivo}` };
+  }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Player statistics
+// ---------------------------------------------------------------------------
+
+/** Real participation: started the match or came on as a substitute. */
+export function participoEnPartido(jugadorId: string, partido: Partido): boolean {
+  const titular =
+    partido.titularesLocal.includes(jugadorId) || partido.titularesVisitante.includes(jugadorId);
+  const entroDeCambio = partido.eventos.some(
+    (e) => e.tipo === "sustitucion" && e.jugadorEntraId === jugadorId
+  );
+  return titular || entroDeCambio;
+}
+
+/** Stats count only finalized matches; suspension is for the team's next match. */
 export function calcularEstadisticasJugadores(
   jugadores: Jugador[],
-  partidos: Partido[],
-  equipos: Equipo[]
+  partidos: Partido[]
 ): EstadisticaJugador[] {
-  const categoriaPorEquipo = new Map(equipos.map((e) => [e.id, e.categoriaId]));
+  const finalizados = partidos.filter((p) => p.estado === "finalizado");
 
   return jugadores.map((jugador) => {
     let goles = 0;
@@ -304,16 +469,9 @@ export function calcularEstadisticasJugadores(
     let rojas = 0;
     let partidosJugados = 0;
 
-    for (const partido of partidos) {
-      if (partido.estado === "programado") continue;
-      const convocado =
-        partido.convocadosLocal.includes(jugador.id) ||
-        partido.convocadosVisitante.includes(jugador.id);
-      if (!convocado) continue;
-
-      partidosJugados += 1;
-      const eventosJugador = eventosDeJugador(partido.eventos, jugador.id);
-      for (const evento of eventosJugador) {
+    for (const partido of finalizados) {
+      if (participoEnPartido(jugador.id, partido)) partidosJugados += 1;
+      for (const evento of eventosDeJugador(partido.eventos, jugador.id)) {
         if (evento.tipo === "gol") goles += 1;
         if (evento.tipo === "autogol") autogoles += 1;
         if (evento.tipo === "tarjeta_amarilla") amarillas += 1;
@@ -321,13 +479,7 @@ export function calcularEstadisticasJugadores(
       }
     }
 
-    const categoriaId = categoriaPorEquipo.get(jugador.equipoId);
-    const proximaJornada = categoriaId
-      ? obtenerProximaJornada(categoriaId, partidos)
-      : 1;
-    const suspension = categoriaId
-      ? calcularSuspensionParaJornada(jugador.id, categoriaId, proximaJornada, partidos)
-      : { suspendido: false as const };
+    const suspension = calcularSuspension(jugador.id, jugador.equipoId, partidos);
 
     return {
       jugadorId: jugador.id,
@@ -340,76 +492,4 @@ export function calcularEstadisticasJugadores(
       motivoSuspension: suspension.motivo,
     };
   });
-}
-
-export interface ResultadoSuspension {
-  suspendido: boolean;
-  motivo?: string;
-}
-
-/**
- * A player is suspended for `jornadaObjetivo` when, in the immediately
- * preceding jornada of the same category, they received a red card or
- * their accumulated yellow-card count (since the last suspension served)
- * reached a multiple of 5.
- */
-export function calcularSuspensionParaJornada(
-  jugadorId: string,
-  categoriaId: string,
-  jornadaObjetivo: number,
-  partidos: Partido[]
-): ResultadoSuspension {
-  const partidosPrevios = partidos
-    .filter(
-      (p) =>
-        p.categoriaId === categoriaId &&
-        p.estado === "finalizado" &&
-        p.jornada < jornadaObjetivo
-    )
-    .sort((a, b) => a.jornada - b.jornada);
-
-  let amarillasAcumuladas = 0;
-  let jornadaDisparo: number | null = null;
-  let motivoDisparo = "";
-
-  for (const partido of partidosPrevios) {
-    const eventosJugador = eventosDeJugador(partido.eventos, jugadorId);
-    const tieneRoja = eventosJugador.some((e) => e.tipo === "tarjeta_roja");
-    const amarillasPartido = eventosJugador.filter(
-      (e) => e.tipo === "tarjeta_amarilla"
-    ).length;
-
-    if (tieneRoja) {
-      jornadaDisparo = partido.jornada;
-      motivoDisparo = "Tarjeta roja directa";
-      amarillasAcumuladas = 0;
-      continue;
-    }
-
-    amarillasAcumuladas += amarillasPartido;
-    if (amarillasAcumuladas >= 5) {
-      jornadaDisparo = partido.jornada;
-      motivoDisparo = "Acumulación de 5 tarjetas amarillas";
-      amarillasAcumuladas = 0;
-    }
-  }
-
-  if (jornadaDisparo !== null && jornadaDisparo + 1 === jornadaObjetivo) {
-    return { suspendido: true, motivo: motivoDisparo };
-  }
-  return { suspendido: false };
-}
-
-/** Next jornada number for a category: last finalized + 1, or 1 if none played. */
-export function obtenerProximaJornada(categoriaId: string, partidos: Partido[]): number {
-  const jornadasFinalizadas = partidos
-    .filter((p) => p.categoriaId === categoriaId && p.estado === "finalizado")
-    .map((p) => p.jornada);
-  if (jornadasFinalizadas.length === 0) {
-    const jornadas = partidos
-      .filter((p) => p.categoriaId === categoriaId)
-      .map((p) => p.jornada);
-    return jornadas.length > 0 ? Math.min(...jornadas) : 1;
-  }
-  return Math.max(...jornadasFinalizadas) + 1;
 }
