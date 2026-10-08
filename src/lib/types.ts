@@ -3,6 +3,9 @@
 
 export type RolSimulado = "administrador" | "delegado" | "publico";
 
+/** Side of a match, used for convocatoria, confirmations and protests. */
+export type Lado = "local" | "visitante";
+
 export interface Liga {
   id: string;
   nombre: string;
@@ -15,6 +18,16 @@ export interface Temporada {
   nombre: string;
 }
 
+/**
+ * Late-registration window opened by the administrator on a category whose
+ * registration is already closed (Entregable 3, etapa E, punto 16).
+ */
+export interface VentanaExtemporanea {
+  abiertaEl: string; // ISO date
+  hasta: string; // ISO date, inclusive
+  motivo: string;
+}
+
 export interface Categoria {
   id: string;
   temporadaId: string;
@@ -25,6 +38,7 @@ export interface Categoria {
   limiteJugadoresPorPlantel: number;
   registroCerrado: boolean;
   fechaCierreRegistro?: string; // ISO date
+  ventanaExtemporanea?: VentanaExtemporanea;
 }
 
 export interface Delegado {
@@ -66,8 +80,10 @@ export interface Jugador {
   estadoElegibilidad: EstadoElegibilidad;
   motivoRevision?: string;
   overrideAdmin?: OverrideAdmin;
-  esMenorDeEdad: boolean;
   tutor?: TutorInfo;
+  // Minority is derived from fechaNacimiento (see esMenorDeEdad); it is not
+  // stored so it stays correct as time passes.
+  altaExtemporanea?: boolean;
 }
 
 export type TipoEvento =
@@ -95,6 +111,18 @@ export type EstadoPartido =
   | "en_curso"
   | "finalizado";
 
+export interface ResolucionProtesta {
+  texto: string;
+  fecha: string; // ISO datetime
+}
+
+/** A delegate's formal objection to the acta, instead of confirming it (RF-15). */
+export interface Protesta {
+  motivo: string;
+  fecha: string; // ISO datetime
+  resolucion?: ResolucionProtesta;
+}
+
 export interface Partido {
   id: string;
   categoriaId: string;
@@ -107,12 +135,34 @@ export interface Partido {
   estado: EstadoPartido;
   convocadosLocal: string[]; // jugadorId[]
   convocadosVisitante: string[];
+  titularesLocal: string[]; // subset of convocados that started the match
+  titularesVisitante: string[];
   eventos: EventoPartido[];
   golesLocal: number;
   golesVisitante: number;
   actaCerrada: boolean;
   confirmacionDelegadoLocal: boolean;
   confirmacionDelegadoVisitante: boolean;
+  protestaLocal?: Protesta;
+  protestaVisitante?: Protesta;
+}
+
+/**
+ * Live state of the mesa de control for one match. Kept in the global state
+ * (and therefore in localStorage) so leaving the page does not lose it.
+ */
+export interface EstadoMesa {
+  minutoBase: number; // minutes accumulated before the current run
+  cronometroDesde: number | null; // epoch ms when the stopwatch was started, null if paused
+  modoOffline: boolean;
+  colaPendiente: EventoPartido[];
+}
+
+export interface ReferenciasBitacora {
+  categoriaId?: string;
+  equipoId?: string;
+  jugadorId?: string;
+  partidoId?: string;
 }
 
 export interface BitacoraEntry {
@@ -121,6 +171,7 @@ export interface BitacoraEntry {
   rol: RolSimulado;
   accion: string;
   detalle?: string;
+  referencias?: ReferenciasBitacora;
 }
 
 export interface SimuladorState {
@@ -132,6 +183,9 @@ export interface SimuladorState {
   partidos: Partido[];
   bitacora: BitacoraEntry[];
   rolActual: RolSimulado;
+  /** Team the simulated delegate represents; only meaningful when rolActual is "delegado". */
+  equipoDelegadoId: string | null;
+  mesas: Record<string, EstadoMesa>;
 }
 
 export interface EstadisticaJugador {
@@ -155,4 +209,10 @@ export interface TablaPosicion {
   golesContra: number;
   diferenciaGoles: number;
   puntos: number;
+}
+
+/** Uniform result for operations that can be rejected by a business rule. */
+export interface ResultadoOperacion {
+  ok: boolean;
+  motivo?: string;
 }

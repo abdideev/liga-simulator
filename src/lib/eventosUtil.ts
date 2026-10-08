@@ -10,15 +10,7 @@ import {
 
 import type { TipoEvento } from "./types";
 
-export const ETIQUETA_EVENTO: Record<TipoEvento, string> = {
-  gol: "Gol",
-  autogol: "Autogol",
-  tarjeta_amarilla: "Tarjeta amarilla",
-  tarjeta_roja: "Tarjeta roja",
-  falta: "Falta",
-  tiro_esquina: "Tiro de esquina",
-  sustitucion: "Sustitución",
-};
+export { ETIQUETA_EVENTO, TIPOS_EVENTO, TIPOS_QUE_REQUIEREN_JUGADOR } from "./eventos";
 
 export const ICONO_EVENTO: Record<TipoEvento, LucideIcon> = {
   gol: Target,
@@ -31,28 +23,11 @@ export const ICONO_EVENTO: Record<TipoEvento, LucideIcon> = {
 };
 
 export const CLASE_COLOR_EVENTO: Record<TipoEvento, string> = {
-  gol: "text-(--color-primary-dark)",
+  gol: "text-(--color-ok-ink)",
   autogol: "text-(--color-danger)",
-  tarjeta_amarilla: "text-amber-500",
+  tarjeta_amarilla: "text-(--color-warn-ink)",
   tarjeta_roja: "text-(--color-danger)",
-  falta: "text-gray-500",
-  tiro_esquina: "text-gray-500",
-  sustitucion: "text-blue-600",
+  falta: "text-(--color-muted)",
+  tiro_esquina: "text-(--color-muted)",
+  sustitucion: "text-(--color-accent)",
 };
-
-export const TIPOS_EVENTO: TipoEvento[] = [
-  "gol",
-  "autogol",
-  "tarjeta_amarilla",
-  "tarjeta_roja",
-  "falta",
-  "tiro_esquina",
-  "sustitucion",
-];
-
-export const TIPOS_QUE_REQUIEREN_JUGADOR: TipoEvento[] = [
-  "gol",
-  "autogol",
-  "tarjeta_amarilla",
-  "tarjeta_roja",
-];
