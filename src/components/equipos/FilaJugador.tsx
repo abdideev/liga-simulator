@@ -28,12 +28,12 @@ export default function FilaJugador({
 
   return (
     <div
-      className="rounded-xl border border-border bg-paper"
+      className="rounded-2xl bg-paper shadow-suave transition-shadow hover:shadow-elevada"
       data-testid={`fila-jugador-${jugador.id}`}
       data-estado={estado}
     >
       <div className="flex items-center gap-3 p-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-muted">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-canvas text-sm font-semibold text-muted">
           {jugador.numero ?? "—"}
         </div>
         <div className="min-w-0 flex-1">
@@ -52,7 +52,7 @@ export default function FilaJugador({
             aria-label="Revisar elegibilidad"
             aria-expanded={abierto}
             data-testid={`boton-revisar-${jugador.id}`}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-control"
           >
             <ChevronDown
               size={18}
@@ -63,7 +63,7 @@ export default function FilaJugador({
       </div>
 
       {esAdministrador && necesitaRevision && abierto && (
-        <div className="space-y-3 border-t border-border p-3" data-testid={`panel-anulacion-${jugador.id}`}>
+        <div className="mx-3 mb-3 space-y-3 rounded-2xl bg-canvas p-4" data-testid={`panel-anulacion-${jugador.id}`}>
           <p className="text-sm text-muted">
             Motivo de revisión: {jugador.motivoRevision ?? "CURP inconsistente o incompleta"}
           </p>

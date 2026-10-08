@@ -23,7 +23,7 @@ export default function FeedEventos({
 
   if (eventos.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-border bg-surface px-3 py-6 text-center text-sm text-muted">
+      <p className="rounded-2xl bg-canvas px-3 py-8 text-center text-sm text-muted">
         Todavía no se han registrado eventos en este partido.
       </p>
     );
@@ -40,7 +40,7 @@ export default function FeedEventos({
             key={evento.id}
             data-testid="evento-partido"
             data-tipo={evento.tipo}
-            className="flex items-center gap-3 rounded-lg border border-border bg-paper px-3 py-2"
+            className="flex items-center gap-3 rounded-2xl bg-canvas px-3 py-2"
           >
             <span className="w-9 shrink-0 text-center text-sm font-semibold tabular-nums text-muted">
               {evento.minuto}&apos;
@@ -65,7 +65,7 @@ export default function FeedEventos({
                 type="button"
                 aria-label="Eliminar evento"
                 onClick={() => onEliminar(evento)}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-danger-soft hover:text-danger-ink"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-danger-soft hover:text-danger-ink"
               >
                 <Trash2 size={16} />
               </button>

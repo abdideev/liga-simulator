@@ -50,7 +50,7 @@ function BloqueFirma({
 
   return (
     <div
-      className="space-y-3 rounded-xl border border-border bg-paper p-3.5"
+      className="space-y-3 rounded-2xl bg-canvas p-4"
       data-testid={`firma-${firma.lado}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -82,7 +82,7 @@ function BloqueFirma({
       )}
 
       {firma.protesta && (
-        <div className="space-y-1 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-ink">
+        <div className="space-y-1 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger-ink">
           <p>
             <span className="font-semibold">Motivo:</span> {firma.protesta.motivo}
           </p>
@@ -148,7 +148,7 @@ function BloqueFirma({
       )}
 
       {actaCerrada && firma.protesta && !firma.protesta.resolucion && puedeResolver && (
-        <div className="space-y-2 border-t border-border pt-3">
+        <div className="space-y-2 border-t border-control pt-3">
           <input
             className={claseCampo}
             value={resolucion}

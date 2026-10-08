@@ -1,10 +1,8 @@
 import type { HTMLAttributes } from "react";
 
+/** White surface with generous radius and a diffuse shadow instead of a border. */
 export default function Tarjeta({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      {...props}
-      className={`rounded-xl border border-border bg-paper p-4 shadow-sm sm:p-5 ${className}`}
-    />
+    <div {...props} className={`rounded-3xl bg-paper p-5 shadow-suave sm:p-6 ${className}`} />
   );
 }

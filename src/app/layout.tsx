@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 import AppShell from "@/components/AppShell";
 
-// Closest Google Fonts match to Satoshi (geometric grotesk). next/font
-// self-hosts it, so the mesa de control works without internet.
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+// next/font self-hosts Inter, so the mesa de control works without internet.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -20,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${jakarta.variable} h-full antialiased`}>
+    <html lang="es" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AppShell>{children}</AppShell>
       </body>

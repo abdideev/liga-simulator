@@ -59,12 +59,12 @@ function ListaConvocatoria({
               data-bloqueado={!permiso.ok}
             >
               <div
-                className={`flex min-h-11 items-center gap-2.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                className={`flex min-h-12 items-center gap-3 rounded-2xl px-3 py-1.5 text-sm transition-colors ${
                   !permiso.ok
-                    ? "border-border bg-surface"
+                    ? "bg-canvas/60"
                     : marcado
-                      ? "border-accent/40 bg-accent-soft"
-                      : "border-border bg-paper"
+                      ? "bg-accent-soft"
+                      : "bg-canvas hover:bg-control/70"
                 }`}
               >
                 <input
@@ -90,8 +90,8 @@ function ListaConvocatoria({
                     disabled={!editable || (!esTitular && titulares.length >= maxTitulares)}
                     onClick={() => onAlternarTitular(jugador.id)}
                     data-testid={`titular-${jugador.id}`}
-                    className={`min-h-8 shrink-0 rounded-full px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                      esTitular ? "bg-accent text-white" : "border border-border bg-paper text-muted"
+                    className={`h-7 min-h-0 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      esTitular ? "bg-accent text-white shadow-control" : "bg-paper text-muted shadow-control"
                     }`}
                   >
                     {esTitular ? "Titular" : "Suplente"}
@@ -138,7 +138,7 @@ export default function PanelConvocatoria({
   convocable: (jugador: Jugador) => ResultadoOperacion;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <ListaConvocatoria
         lado="local"
         titulo={local.nombre}

@@ -140,7 +140,7 @@ export default function VistaPublicaPage() {
                       <span className="min-w-0 flex-1 truncate font-medium text-ink">
                         {nombreEquipo(partido.equipoLocalId)}
                       </span>
-                      <span className="shrink-0 rounded-lg bg-ink px-3 py-1 text-sm font-semibold tabular-nums text-paper">
+                      <span className="shrink-0 rounded-xl bg-ink px-3 py-1 text-sm font-semibold tabular-nums text-paper">
                         {partido.golesLocal} - {partido.golesVisitante}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-right font-medium text-ink">
@@ -160,10 +160,10 @@ export default function VistaPublicaPage() {
                 descripcion="La tabla de posiciones se publicará cuando existan partidos finalizados."
               />
             ) : (
-              <Tarjeta className="overflow-x-auto p-0 sm:p-0">
+              <div className="overflow-x-auto rounded-3xl bg-paper shadow-suave">
                 <table className="w-full min-w-[380px] text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface text-left text-xs text-muted">
+                    <tr className="bg-canvas text-left text-xs uppercase tracking-wide text-muted">
                       <th className="px-4 py-3 font-semibold">#</th>
                       <th className="px-4 py-3 font-semibold">Equipo</th>
                       <th className="px-2 py-3 text-center font-semibold">PJ</th>
@@ -173,7 +173,7 @@ export default function VistaPublicaPage() {
                   </thead>
                   <tbody>
                     {tabla.map((fila, i) => (
-                      <tr key={fila.equipoId} className="border-b border-border last:border-0">
+                      <tr key={fila.equipoId} className="border-b border-canvas transition-colors last:border-0 hover:bg-canvas/60">
                         <td className="px-4 py-3 text-muted">{i + 1}</td>
                         <td className="px-4 py-3 font-medium text-ink">{nombreEquipo(fila.equipoId)}</td>
                         <td className="px-2 py-3 text-center tabular-nums text-muted">{fila.partidosJugados}</td>
@@ -183,7 +183,7 @@ export default function VistaPublicaPage() {
                     ))}
                   </tbody>
                 </table>
-              </Tarjeta>
+              </div>
             ))}
 
           {pestana === "goleo" &&

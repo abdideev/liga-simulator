@@ -15,7 +15,7 @@ const ROLES: { value: RolSimulado; label: string }[] = [
 ];
 
 const claseSelector =
-  "min-w-0 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm font-medium text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft";
+  "min-w-0 cursor-pointer rounded-full bg-paper px-3.5 py-2 text-sm font-medium text-ink shadow-control outline-none transition-shadow hover:shadow-suave focus:ring-2 focus:ring-accent";
 
 export default function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
   const { estado, despachar, reiniciarSimulacion } = useSimulador();
@@ -28,26 +28,26 @@ export default function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-paper/90 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 md:px-5">
+    <header className="sticky top-0 z-30 bg-canvas/80 backdrop-blur-md">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 md:px-6">
         <button
           type="button"
           onClick={onAbrirMenu}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-ink hover:bg-surface md:hidden"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink hover:bg-control md:hidden"
           aria-label="Abrir menú"
         >
           <Menu size={22} />
         </button>
 
-        <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-white md:grid">
+        <span className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-paper shadow-control md:grid">
           <Trophy size={18} />
         </span>
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
-          <span className="truncate text-sm font-semibold text-ink md:text-base">
+          <span className="truncate text-sm font-semibold tracking-tight text-ink md:text-base">
             {estado.liga.nombre}
           </span>
-          <Etiqueta intencion="warn" className="whitespace-nowrap px-2 py-0.5 text-[11px]">
+          <Etiqueta intencion="accent" className="whitespace-nowrap px-2 py-0.5 text-[11px]">
             Prototipo<span className="hidden sm:inline">— datos simulados</span>
           </Etiqueta>
         </div>
@@ -70,7 +70,7 @@ export default function Header({ onAbrirMenu }: { onAbrirMenu: () => void }) {
           <span className="hidden shrink-0 sm:block">
             <Boton
               intencion="neutral"
-              variante="contorno"
+              variante="suave"
               onClick={manejarReinicio}
               data-testid="boton-reiniciar"
             >

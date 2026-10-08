@@ -1,5 +1,6 @@
 "use client";
 
+/** Segmented control: gray pill track with a raised white pill for the active tab. */
 export default function Pestanas<T extends string>({
   opciones,
   valor,
@@ -10,7 +11,7 @@ export default function Pestanas<T extends string>({
   onCambiar: (id: T) => void;
 }) {
   return (
-    <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-surface p-1">
+    <div role="tablist" className="flex gap-1 overflow-x-auto rounded-full bg-control p-1">
       {opciones.map((opcion) => {
         const activa = valor === opcion.id;
         return (
@@ -21,8 +22,8 @@ export default function Pestanas<T extends string>({
             aria-selected={activa}
             data-testid={`pestana-${opcion.id}`}
             onClick={() => onCambiar(opcion.id)}
-            className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors ${
-              activa ? "bg-paper text-ink shadow-sm" : "text-muted hover:text-ink"
+            className={`min-h-10 flex-1 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${
+              activa ? "bg-paper text-ink shadow-control" : "text-muted hover:text-ink"
             }`}
           >
             {opcion.etiqueta}

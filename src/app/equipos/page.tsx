@@ -6,6 +6,7 @@ import { ChevronRight, Lock, Plus } from "lucide-react";
 
 import { useSimulador } from "@/context/SimuladorContext";
 import { puedeVerPlantel } from "@/lib/permisos";
+import Avatar from "@/components/ui/Avatar";
 import Boton from "@/components/ui/Boton";
 import Campo, { claseCampo } from "@/components/ui/Campo";
 import Tarjeta from "@/components/ui/Tarjeta";
@@ -151,10 +152,11 @@ export default function EquiposPage() {
               const contenido = (
                 <Tarjeta
                   className={`flex items-center justify-between gap-3 ${
-                    visible ? "transition-shadow hover:shadow-md" : "opacity-80"
+                    visible ? "transition-shadow hover:shadow-elevada" : "opacity-80"
                   }`}
                 >
-                  <div className="min-w-0 space-y-0.5">
+                  <Avatar nombre={equipo.nombre} tamano="lg" />
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="font-semibold text-ink">{equipo.nombre}</p>
                     <p className="text-sm text-muted">
                       Delegado: {equipo.delegado.nombre} · {equipo.delegado.telefono}

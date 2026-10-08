@@ -21,5 +21,6 @@ export default function Campo({
   );
 }
 
+/** White input with a soft shadow and hairline ring; accent ring on focus. */
 export const claseCampo =
-  "min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:bg-paper focus:ring-2 focus:ring-accent-soft";
+  "min-h-11 w-full rounded-xl bg-paper px-3.5 text-base text-ink shadow-control outline-none ring-1 ring-ink/5 transition-[box-shadow] duration-150 placeholder:text-muted/70 hover:ring-ink/15 focus:ring-2 focus:ring-accent";

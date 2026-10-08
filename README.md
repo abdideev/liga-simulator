@@ -182,9 +182,11 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
 - **Operación sin conexión (RNF-01/RNF-02):** se mantiene como simulación;
   la versión real (service worker, IndexedDB, `navigator.onLine`) queda
   para un ciclo posterior.
-- **Tipografía:** Satoshi no está disponible en Google Fonts; se usa
-  **Plus Jakarta Sans** (la alternativa más cercana), auto-hospedada con
-  `next/font` para que funcione sin internet.
+- **Diseño:** estilo inspirado en HeroUI v3 (lienzo gris claro, superficies
+  blancas con esquinas amplias y sombras difusas, controles en píldora) con
+  la paleta del equipo.
+- **Tipografía:** **Inter**, auto-hospedada con `next/font` para que
+  funcione sin internet.
 
 ## Organización del código
 

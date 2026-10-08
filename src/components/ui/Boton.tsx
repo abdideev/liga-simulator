@@ -20,7 +20,7 @@ export default function Boton({
     <button
       type={type}
       {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${CLASES_INTENCION[intencion][variante]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,transform,opacity] duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 ${CLASES_INTENCION[intencion][variante]} ${className}`}
     />
   );
 }

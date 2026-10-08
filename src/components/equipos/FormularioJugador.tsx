@@ -137,7 +137,7 @@ export default function FormularioJugador({
 
       {esMenor && (
         <div
-          className="space-y-3 rounded-xl border border-warn bg-warn-soft p-4"
+          className="space-y-3 rounded-2xl bg-warn-soft p-4"
           data-testid="bloque-tutor"
         >
           <p className="text-sm font-semibold text-warn-ink">
@@ -145,7 +145,7 @@ export default function FormularioJugador({
           </p>
           <Campo etiqueta="Nombre del tutor">
             <input
-              className={`${claseCampo} bg-paper`}
+              className={claseCampo}
               value={tutorNombre}
               onChange={(e) => setTutorNombre(e.target.value)}
               data-testid="campo-nombre-tutor"

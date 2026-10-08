@@ -4,10 +4,10 @@ import type { HTMLAttributes } from "react";
 type IntencionAviso = "accent" | "ok" | "warn" | "danger";
 
 const ESTILOS: Record<IntencionAviso, { clases: string; icono: LucideIcon }> = {
-  accent: { clases: "border-accent/30 bg-accent-soft text-accent-ink", icono: Info },
-  ok: { clases: "border-ok/30 bg-ok-soft text-ok-ink", icono: CheckCircle2 },
-  warn: { clases: "border-warn bg-warn-soft text-warn-ink", icono: AlertTriangle },
-  danger: { clases: "border-danger/30 bg-danger-soft text-danger-ink", icono: XCircle },
+  accent: { clases: "bg-accent-soft text-accent-ink", icono: Info },
+  ok: { clases: "bg-ok-soft text-ok-ink", icono: CheckCircle2 },
+  warn: { clases: "bg-warn-soft text-warn-ink", icono: AlertTriangle },
+  danger: { clases: "bg-danger-soft text-danger-ink", icono: XCircle },
 };
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -15,7 +15,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
   icono?: LucideIcon;
 }
 
-/** Inline notice box (info, success, warning, error). */
+/** Inline notice (info, success, warning, error) as a soft tinted surface. */
 export default function Aviso({
   intencion = "accent",
   icono,
@@ -29,7 +29,7 @@ export default function Aviso({
     <div
       role={intencion === "danger" ? "alert" : "status"}
       {...props}
-      className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm font-medium ${clases} ${className}`}
+      className={`flex items-start gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${clases} ${className}`}
     >
       <Icono size={18} className="mt-px shrink-0" />
       <div className="min-w-0 flex-1">{children}</div>

@@ -66,12 +66,12 @@ export default function NavSidebar({
         <button
           aria-label="Cerrar menú"
           onClick={onCerrar}
-          className="fixed inset-0 z-40 bg-ink/30 md:hidden"
+          className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-sm md:hidden"
         />
       )}
       <nav
         aria-label="Menú principal"
-        className={`fixed inset-y-0 left-0 z-50 w-72 transform border-r border-border bg-paper p-3 transition-transform duration-200 md:sticky md:top-[61px] md:z-0 md:h-[calc(100vh-61px)] md:w-60 md:translate-x-0 md:p-4 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform rounded-r-3xl bg-paper p-3 shadow-elevada transition-transform duration-200 md:sticky md:top-[60px] md:z-0 md:h-[calc(100vh-60px)] md:w-60 md:translate-x-0 md:rounded-none md:bg-transparent md:p-4 md:shadow-none ${
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -80,7 +80,7 @@ export default function NavSidebar({
           <button
             onClick={onCerrar}
             aria-label="Cerrar menú"
-            className="grid h-11 w-11 place-items-center rounded-lg hover:bg-surface"
+            className="grid h-11 w-11 place-items-center rounded-full hover:bg-control"
           >
             <X size={20} />
           </button>
@@ -97,13 +97,13 @@ export default function NavSidebar({
                   onClick={onCerrar}
                   data-testid={`nav-${item.href === "/" ? "inicio" : item.href.slice(1)}`}
                   aria-current={activo ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`flex min-h-11 items-center gap-3 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${
                     activo
-                      ? "bg-accent-soft text-accent-ink"
-                      : "text-muted hover:bg-surface hover:text-ink"
+                      ? "bg-paper text-ink shadow-control"
+                      : "text-muted hover:bg-control/70 hover:text-ink"
                   }`}
                 >
-                  <Icono size={18} />
+                  <Icono size={18} className={activo ? "text-accent" : ""} />
                   {item.etiqueta}
                 </Link>
               </li>
@@ -114,7 +114,7 @@ export default function NavSidebar({
         <button
           type="button"
           onClick={manejarReinicio}
-          className="mt-4 flex min-h-11 w-full items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink hover:bg-surface sm:hidden"
+          className="mt-4 flex min-h-11 w-full items-center gap-2 rounded-full bg-control px-4 py-2 text-sm font-medium text-ink hover:bg-[#e0e0e2] sm:hidden"
         >
           <RotateCcw size={16} />
           Reiniciar simulación

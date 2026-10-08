@@ -123,7 +123,7 @@ export default function CierreRegistroPage() {
               )}
 
               {formularioAbierto ? (
-                <div className="mt-4 space-y-4 border-t border-border pt-4">
+                <div className="mt-5 space-y-4 rounded-2xl bg-canvas p-4">
                   <Campo
                     etiqueta={
                       formulario.tipo === "cierre" ? "Fecha de cierre" : "Altas permitidas hasta"

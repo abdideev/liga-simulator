@@ -30,7 +30,7 @@ export default function Marcador({
 }) {
   return (
     <div
-      className={`${fijo ? "sticky top-[61px] z-20" : ""} rounded-xl border border-border bg-paper/95 p-4 shadow-sm backdrop-blur`}
+      className={`${fijo ? "sticky top-[60px] z-20" : ""} rounded-3xl bg-paper/95 p-5 shadow-suave backdrop-blur`}
       data-testid="marcador"
     >
       <div className="flex items-center justify-between gap-3">
@@ -38,7 +38,7 @@ export default function Marcador({
           {nombreLocal}
         </span>
         <div
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-ink px-4 py-1.5 text-2xl font-semibold tabular-nums text-paper"
+          className="flex shrink-0 items-center gap-2 rounded-2xl bg-ink px-5 py-2 text-3xl font-semibold tabular-nums text-paper"
           data-testid="marcador-goles"
         >
           <span>{golesLocal}</span>
@@ -56,7 +56,7 @@ export default function Marcador({
             <button
               type="button"
               onClick={() => onAjustarMinuto(-1)}
-              className="grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-surface"
+              className="grid h-10 w-10 place-items-center rounded-full bg-canvas text-muted hover:bg-control"
               aria-label="Restar un minuto"
             >
               <Minus size={16} />
@@ -83,7 +83,7 @@ export default function Marcador({
               <button
                 type="button"
                 onClick={() => onAjustarMinuto(1)}
-                className="grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-surface"
+                className="grid h-10 w-10 place-items-center rounded-full bg-canvas text-muted hover:bg-control"
                 aria-label="Sumar un minuto"
               >
                 <Plus size={16} />

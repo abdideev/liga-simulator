@@ -102,8 +102,8 @@ export default function PanelRegistrarEvento({
     (!esSustitucion || (!!jugadorId && !!jugadorEntraId && jugadorId !== jugadorEntraId));
 
   const claseEquipo = (activo: boolean) =>
-    `min-h-11 truncate rounded-lg border px-2 text-sm font-semibold transition-colors ${
-      activo ? "border-accent bg-accent-soft text-accent-ink" : "border-border bg-paper text-ink hover:bg-surface"
+    `min-h-11 truncate rounded-full px-3 text-sm font-medium transition-colors ${
+      activo ? "bg-accent text-white shadow-control" : "bg-paper text-ink shadow-control hover:bg-control/50"
     }`;
 
   return (
@@ -119,10 +119,10 @@ export default function PanelRegistrarEvento({
               onClick={() => elegirTipo(t)}
               data-testid={`tipo-evento-${t}`}
               aria-pressed={activo}
-              className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-[11px] font-medium leading-tight transition-colors ${
+              className={`flex min-h-18 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-2.5 text-[11px] font-medium leading-tight transition-[background-color,transform] duration-150 active:scale-[0.96] ${
                 activo
-                  ? "border-accent bg-accent-soft text-accent-ink"
-                  : "border-border bg-paper text-ink hover:bg-surface"
+                  ? "bg-accent-soft text-accent-ink ring-2 ring-accent"
+                  : "bg-canvas text-ink hover:bg-control"
               }`}
             >
               <Icono size={18} />
@@ -133,7 +133,7 @@ export default function PanelRegistrarEvento({
       </div>
 
       {tipo && (
-        <div className="space-y-3 rounded-xl border border-border bg-surface p-3.5">
+        <div className="space-y-3 rounded-2xl bg-canvas p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">{ETIQUETA_EVENTO[tipo]}</p>
             <label className="flex items-center gap-2 text-sm text-muted">
@@ -144,7 +144,7 @@ export default function PanelRegistrarEvento({
                 max={130}
                 value={minuto}
                 onChange={(e) => setMinuto(Number(e.target.value))}
-                className="w-16 rounded-md border border-border bg-paper px-2 py-1 text-center text-ink"
+                className="w-16 rounded-xl bg-paper px-2 py-1 text-center text-ink shadow-control outline-none focus:ring-2 focus:ring-accent"
                 data-testid="campo-minuto-evento"
               />
             </label>
@@ -171,7 +171,7 @@ export default function PanelRegistrarEvento({
 
           {equipoId && !esSustitucion && (
             <select
-              className={`${claseCampo} bg-paper`}
+              className={claseCampo}
               value={jugadorId}
               onChange={(e) => setJugadorId(e.target.value)}
               data-testid="evento-jugador"
@@ -184,7 +184,7 @@ export default function PanelRegistrarEvento({
           {equipoId && esSustitucion && (
             <div className="grid grid-cols-1 gap-2">
               <select
-                className={`${claseCampo} bg-paper`}
+                className={claseCampo}
                 value={jugadorId}
                 onChange={(e) => setJugadorId(e.target.value)}
                 data-testid="evento-jugador-sale"
@@ -193,7 +193,7 @@ export default function PanelRegistrarEvento({
                 <OpcionesJugador jugadores={plantelEquipo} />
               </select>
               <select
-                className={`${claseCampo} bg-paper`}
+                className={claseCampo}
                 value={jugadorEntraId}
                 onChange={(e) => setJugadorEntraId(e.target.value)}
                 data-testid="evento-jugador-entra"

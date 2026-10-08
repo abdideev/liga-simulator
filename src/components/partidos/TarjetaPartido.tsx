@@ -1,5 +1,6 @@
 import { MapPin } from "lucide-react";
 
+import Avatar from "@/components/ui/Avatar";
 import Etiqueta from "@/components/ui/Etiqueta";
 import Tarjeta from "@/components/ui/Tarjeta";
 import type { Intencion } from "@/components/ui/estilos";
@@ -30,7 +31,7 @@ export default function TarjetaPartido({
   const estado = ESTADO_PARTIDO[partido.estado];
   return (
     <Tarjeta
-      className={interactiva ? "transition-shadow hover:shadow-md" : ""}
+      className={interactiva ? "transition-shadow hover:shadow-elevada" : ""}
       data-testid={`partido-${partido.id}`}
       data-estado={partido.estado}
     >
@@ -49,17 +50,21 @@ export default function TarjetaPartido({
           <Etiqueta intencion={estado.intencion}>{estado.texto}</Etiqueta>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 truncate font-medium text-ink">
-          {nombreEquipo(partido.equipoLocalId)}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Avatar nombre={nombreEquipo(partido.equipoLocalId)} tamano="sm" />
+          <span className="truncate font-medium text-ink">{nombreEquipo(partido.equipoLocalId)}</span>
         </span>
-        <span className="shrink-0 rounded-lg bg-surface px-3 py-1 text-sm font-semibold tabular-nums text-ink">
+        <span className="shrink-0 rounded-xl bg-canvas px-3 py-1 text-sm font-semibold tabular-nums text-ink">
           {partido.estado === "programado"
             ? "vs"
             : `${partido.golesLocal} - ${partido.golesVisitante}`}
         </span>
-        <span className="min-w-0 flex-1 truncate text-right font-medium text-ink">
-          {nombreEquipo(partido.equipoVisitanteId)}
+        <span className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
+          <span className="truncate text-right font-medium text-ink">
+            {nombreEquipo(partido.equipoVisitanteId)}
+          </span>
+          <Avatar nombre={nombreEquipo(partido.equipoVisitanteId)} tamano="sm" />
         </span>
       </div>
       <p className="mt-3 flex items-center gap-1 text-xs text-muted">

@@ -89,10 +89,10 @@ export default function EstadisticasPage() {
                 descripcion="La tabla se llenará automáticamente cuando se cierren actas de partidos de esta categoría."
               />
             ) : (
-              <Tarjeta className="overflow-x-auto p-0 sm:p-0" data-testid="tabla-posiciones">
-                <table className="w-full min-w-[520px] text-sm">
+              <div className="overflow-x-auto rounded-3xl bg-paper shadow-suave" data-testid="tabla-posiciones">
+                <table className="w-full min-w-[480px] text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface text-left text-xs text-muted">
+                    <tr className="bg-canvas text-left text-xs uppercase tracking-wide text-muted">
                       <th className="px-4 py-3 font-semibold">#</th>
                       <th className="px-4 py-3 font-semibold">Equipo</th>
                       {COLUMNAS_TABLA.map((c) => (
@@ -105,7 +105,7 @@ export default function EstadisticasPage() {
                   </thead>
                   <tbody>
                     {tabla.map((fila, i) => (
-                      <tr key={fila.equipoId} className="border-b border-border last:border-0">
+                      <tr key={fila.equipoId} className="border-b border-canvas transition-colors last:border-0 hover:bg-canvas/60">
                         <td className="px-4 py-3 text-muted">{i + 1}</td>
                         <td className="px-4 py-3 font-medium text-ink">{nombreEquipo(fila.equipoId)}</td>
                         {[
@@ -128,7 +128,7 @@ export default function EstadisticasPage() {
                     ))}
                   </tbody>
                 </table>
-              </Tarjeta>
+              </div>
             ))}
 
           {pestana === "estadisticas" &&
@@ -182,7 +182,7 @@ export default function EstadisticasPage() {
                 {suspendidos.map((e) => {
                   const jugador = jugadoresCategoria.find((j) => j.id === e.jugadorId)!;
                   return (
-                    <Tarjeta key={e.jugadorId} className="flex items-center gap-3 border-danger/30">
+                    <Tarjeta key={e.jugadorId} className="flex items-center gap-3 ring-1 ring-danger/15">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-danger-soft text-danger-ink">
                         <ShieldAlert size={18} />
                       </span>

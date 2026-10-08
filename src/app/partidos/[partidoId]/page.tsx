@@ -211,7 +211,7 @@ export default function CapturaPartidoPage() {
         <div
           role="status"
           data-testid="toast"
-          className="fixed bottom-4 left-1/2 z-40 max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper shadow-lg"
+          className="fixed bottom-4 left-1/2 z-40 max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper shadow-elevada"
         >
           {mensajeToast}
         </div>

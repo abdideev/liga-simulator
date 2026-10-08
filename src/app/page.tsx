@@ -96,12 +96,14 @@ export default function InicioPage() {
         descripcion={temporadaActiva?.nombre}
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {tarjetas.map((t) => (
           <Link key={t.titulo} href={t.href} data-testid={`tarjeta-inicio-${t.titulo.toLowerCase().replace(/\s+/g, "-")}`}>
-            <Tarjeta className="h-full transition-shadow hover:shadow-md">
-              <t.icono className="text-accent" size={20} />
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-ink">{t.valor}</p>
+            <Tarjeta className="h-full transition-shadow hover:shadow-elevada">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent-soft text-accent">
+                <t.icono size={20} />
+              </span>
+              <p className="mt-4 text-3xl font-semibold tracking-tight text-ink">{t.valor}</p>
               <p className="text-sm font-semibold text-ink">{t.titulo}</p>
               <p className="text-xs text-muted">{t.detalle}</p>
             </Tarjeta>
@@ -111,7 +113,7 @@ export default function InicioPage() {
 
       <Tarjeta>
         <h2 className="mb-3 font-semibold text-ink">Categorías activas</h2>
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-canvas">
           {categorias.map((cat) => {
             const equiposCat = equipos.filter((e) => e.categoriaId === cat.id).length;
             const registro = ETIQUETA_REGISTRO[estadoRegistro(cat, hoy)];

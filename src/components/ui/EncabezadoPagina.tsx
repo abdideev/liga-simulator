@@ -13,13 +13,13 @@ export default function EncabezadoPagina({
   accion?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-ink">
-          <Icono size={20} />
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-4">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-paper text-accent shadow-suave">
+          <Icono size={22} />
         </span>
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-ink">{titulo}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">{titulo}</h1>
           {descripcion && <p className="mt-0.5 text-sm text-muted">{descripcion}</p>}
         </div>
       </div>

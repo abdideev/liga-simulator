@@ -9,7 +9,7 @@ interface Props extends HTMLAttributes<HTMLSpanElement> {
   icono?: LucideIcon;
 }
 
-/** Small status label (badge) in one of the five intents. */
+/** Small status label (chip) in one of the five intents. */
 export default function Etiqueta({
   intencion = "neutral",
   variante = "suave",
@@ -26,7 +26,7 @@ export default function Etiqueta({
   return (
     <span
       {...props}
-      className={`inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${clases} ${className}`}
+      className={`inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${clases} ${className}`}
     >
       {Icono && <Icono size={13} strokeWidth={2.25} />}
       {children}

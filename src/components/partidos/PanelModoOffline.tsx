@@ -17,7 +17,7 @@ export default function PanelModoOffline({
 }) {
   return (
     <div className="space-y-3">
-      <label className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3.5">
+      <label className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl bg-canvas px-4">
         <span className="flex items-center gap-2 text-sm font-medium text-ink">
           {activo ? (
             <WifiOff size={18} className="text-warn-ink" />
@@ -32,7 +32,6 @@ export default function PanelModoOffline({
           checked={activo}
           disabled={sincronizando}
           onChange={onAlternar}
-          className="h-6 w-6"
           aria-label="Modo sin conexión"
           data-testid="toggle-modo-offline"
         />
@@ -50,7 +49,7 @@ export default function PanelModoOffline({
       )}
 
       {sincronizando && (
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-muted">
+        <div className="flex items-center gap-2 rounded-2xl bg-canvas px-4 py-3 text-sm font-medium text-muted">
           <Loader2 size={16} className="animate-spin" />
           Sincronizando…
         </div>
