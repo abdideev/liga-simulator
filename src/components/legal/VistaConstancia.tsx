@@ -66,8 +66,8 @@ export default function VistaConstancia({ constancia }: { constancia: Constancia
             {filasConstancia(constancia).map(([campo, valor, sirve]) => (
               <tr key={campo} className="border-t border-canvas align-top first:border-0">
                 <th className="w-44 bg-canvas px-3 py-2 font-medium text-ink">{campo}</th>
-                <td className="break-all px-3 py-2 text-ink">
-                  {campo.startsWith("Huella") ? <code className="font-mono text-[11px]">{valor}</code> : valor}
+                <td className="break-words px-3 py-2 text-ink">
+                  {campo.startsWith("Huella") ? <code className="break-all font-mono text-[11px]">{valor}</code> : valor}
                 </td>
                 <td className="w-52 px-3 py-2 text-xs text-muted">{sirve}</td>
               </tr>
