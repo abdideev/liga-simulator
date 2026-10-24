@@ -17,6 +17,10 @@ export const ROLES_POR_SECCION: Record<string, RolSimulado[]> = {
   "/estadisticas": ["administrador", "delegado"],
   "/bitacora": ["administrador"],
   "/publico": TODOS,
+  "/privacidad": TODOS,
+  "/legal": TODOS,
+  "/cuenta": ["administrador", "delegado"],
+  "/licencia": ["administrador"],
 };
 
 /** "/equipos/equipo-3" → "/equipos". */

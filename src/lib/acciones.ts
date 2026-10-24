@@ -2,7 +2,11 @@
 // The SimuladorContext only dispatches these; simuladorReducer applies them.
 
 import type {
+  AceptacionTerminos,
+  ConstanciaAceptacion,
   EventoPartido,
+  MotivoCancelacion,
+  TipoArco,
   Lado,
   OverrideAdmin,
   RolSimulado,
@@ -78,7 +82,19 @@ export type AccionSimulador =
   | { tipo: "registrarProtesta"; partidoId: string; lado: Lado; motivo: string }
   | { tipo: "retirarProtesta"; partidoId: string; lado: Lado }
   | { tipo: "cerrarActa"; partidoId: string }
-  | { tipo: "resolverProtesta"; partidoId: string; lado: Lado; texto: string };
+  | { tipo: "resolverProtesta"; partidoId: string; lado: Lado; texto: string }
+  // Legal compliance (Entregable 8)
+  | { tipo: "aceptarTerminos"; aceptacion: Omit<AceptacionTerminos, "id" | "fecha"> }
+  | { tipo: "registrarConstancia"; constancia: ConstanciaAceptacion }
+  | { tipo: "cancelarPlan"; motivo: MotivoCancelacion; detalle?: string; efectivaEl: string }
+  | { tipo: "revertirCancelacionPlan" }
+  | { tipo: "registrarDescargaDatos"; formato: string }
+  | {
+      tipo: "crearSolicitudArco";
+      solicitud: { tipo: TipoArco; descripcion: string; medio: string; usuario: string; nombre: string };
+    }
+  | { tipo: "turnarSolicitudArco"; folio: string }
+  | { tipo: "cambiarPublicacionNombre"; jugadorId: string; publicar: boolean };
 
 /**
  * Side effects the reducer needs, injected so it stays deterministic:

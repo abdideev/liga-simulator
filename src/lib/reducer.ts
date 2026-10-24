@@ -25,7 +25,9 @@ import {
   titularesDelLado,
   validarAccion,
 } from "./validaciones";
+import { sumarDiasHabiles } from "./legal/reglas";
 import type {
+  AceptacionTerminos,
   BitacoraEntry,
   Categoria,
   EstadoMesa,
@@ -35,6 +37,7 @@ import type {
   Partido,
   ReferenciasBitacora,
   SimuladorState,
+  SolicitudArco,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -362,7 +365,7 @@ export function simuladorReducer(
         fotoUrl: datos.fotoUrl,
         estadoElegibilidad,
         motivoRevision,
-        tutor: menor ? datos.tutor : undefined,
+        tutor: menor && datos.tutor ? { ...datos.tutor, fecha: entorno.ahora.toISOString() } : undefined,
         ...(extemporanea && { altaExtemporanea: true }),
       };
 
@@ -370,7 +373,11 @@ export function simuladorReducer(
         { ...estado, jugadores: [...estado.jugadores, nuevo] },
         entorno,
         extemporanea ? "Inscripción extemporánea de jugador" : "Inscripción de jugador",
-        `${nuevo.nombreCompleto} — ${equipo.nombre} (${estadoElegibilidad})`,
+        `${nuevo.nombreCompleto} — ${equipo.nombre} (${estadoElegibilidad})${
+          nuevo.tutor
+            ? ` · consentimiento del tutor v${nuevo.tutor.versionAviso ?? "1.0"}; nombre público: ${nuevo.tutor.publicarNombre ? "sí" : "no, solo dorsal"}`
+            : ""
+        }`,
         { jugadorId: nuevo.id, equipoId: equipo.id }
       );
     }
@@ -626,6 +633,129 @@ export function simuladorReducer(
         "Resolución de protesta",
         `${nombreEquipo(estado, equipoId)}: ${resolucion.texto}`,
         { partidoId: partido.id, equipoId }
+      );
+    }
+
+    // --- Legal compliance ---------------------------------------------------
+    case "aceptarTerminos": {
+      const aceptacion: AceptacionTerminos = {
+        ...accion.aceptacion,
+        nombre: accion.aceptacion.nombre.trim(),
+        correo: accion.aceptacion.correo.trim(),
+        id: entorno.crearId("aceptacion"),
+        fecha: entorno.ahora.toISOString(),
+      };
+      return conBitacora(
+        { ...estado, legal: { ...estado.legal, aceptaciones: [...estado.legal.aceptaciones, aceptacion] } },
+        entorno,
+        `Aceptación de Términos de uso v${aceptacion.versionTerminos}`,
+        `${aceptacion.nombre} (${aceptacion.correo}) — huella ${aceptacion.huellaTerminos.slice(0, 12)}… · aviso v${aceptacion.versionAviso} mostrado`
+      );
+    }
+
+    case "registrarConstancia": {
+      const c = accion.constancia;
+      return conBitacora(
+        {
+          ...estado,
+          legal: {
+            ...estado.legal,
+            constancias: [...estado.legal.constancias, c],
+            licencia: { ...estado.legal.licencia, estado: "activa", folioConstanciaVigente: c.folio, cancelacion: undefined },
+          },
+        },
+        entorno,
+        `Aceptación de Condiciones de Uso y Licencia v${c.version}`,
+        `Folio ${c.folio} — ${c.representante} (${c.cargo}) · código verificado · huella ${c.huellaTexto.slice(0, 12)}…`
+      );
+    }
+
+    case "cancelarPlan": {
+      const cancelacion = {
+        solicitadaEl: entorno.ahora.toISOString(),
+        motivo: accion.motivo,
+        detalle: accion.detalle?.trim() || undefined,
+        efectivaEl: accion.efectivaEl,
+        solicitadaPor: estado.legal.administrador.nombre,
+      };
+      return conBitacora(
+        {
+          ...estado,
+          legal: {
+            ...estado.legal,
+            licencia: { ...estado.legal.licencia, estado: "cancelacion_programada", cancelacion },
+          },
+        },
+        entorno,
+        "Cancelación del plan (aviso de no renovación)",
+        `El servicio termina el ${accion.efectivaEl}; después se entregan y suprimen los datos de la liga`
+      );
+    }
+
+    case "revertirCancelacionPlan":
+      return conBitacora(
+        {
+          ...estado,
+          legal: { ...estado.legal, licencia: { ...estado.legal.licencia, estado: "activa", cancelacion: undefined } },
+        },
+        entorno,
+        "Reversión de la cancelación del plan",
+        "La licencia vuelve a renovarse automáticamente"
+      );
+
+    case "registrarDescargaDatos":
+      return conBitacora(estado, entorno, "Exportación de los datos de la liga", `Formato ${accion.formato} (portabilidad)`);
+
+    case "crearSolicitudArco": {
+      const anio = entorno.ahora.getFullYear();
+      const folio = `ARCO-${anio}-${String(estado.legal.solicitudesArco.length + 1).padStart(4, "0")}`;
+      const solicitud: SolicitudArco = {
+        folio,
+        ...accion.solicitud,
+        descripcion: accion.solicitud.descripcion.trim(),
+        medio: accion.solicitud.medio.trim(),
+        fecha: entorno.ahora.toISOString(),
+        venceEl: sumarDiasHabiles(hoy, 20),
+        turnarAntesDe: sumarDiasHabiles(hoy, 2),
+        estado: "recibida",
+      };
+      return conBitacora(
+        { ...estado, legal: { ...estado.legal, solicitudesArco: [...estado.legal.solicitudesArco, solicitud] } },
+        entorno,
+        `Solicitud ARCO recibida (${solicitud.tipo})`,
+        `Folio ${folio} — ${solicitud.nombre}; vence el ${solicitud.venceEl}`
+      );
+    }
+
+    case "turnarSolicitudArco":
+      return conBitacora(
+        {
+          ...estado,
+          legal: {
+            ...estado.legal,
+            solicitudesArco: estado.legal.solicitudesArco.map((s) =>
+              s.folio === accion.folio ? { ...s, estado: "turnada", turnadaEl: entorno.ahora.toISOString() } : s
+            ),
+          },
+        },
+        entorno,
+        "Solicitud ARCO turnada a la Unidad de Transparencia",
+        `Folio ${accion.folio}`
+      );
+
+    case "cambiarPublicacionNombre": {
+      const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId)!;
+      return conBitacora(
+        {
+          ...estado,
+          jugadores: estado.jugadores.map((j) =>
+            j.id === jugador.id ? { ...j, tutor: { ...j.tutor!, publicarNombre: accion.publicar } } : j
+          ),
+        },
+        entorno,
+        accion.publicar ? "Consentimiento 2 otorgado (nombre público)" : "Consentimiento 2 revocado (solo dorsal)",
+        `${jugador.nombreCompleto} — por su tutor ${jugador.tutor!.nombre}`,
+        { jugadorId: jugador.id, equipoId: jugador.equipoId }
       );
     }
   }
