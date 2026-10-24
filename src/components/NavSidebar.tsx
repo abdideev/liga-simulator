@@ -28,6 +28,8 @@ const ITEMS: ItemNav[] = [
   { href: "/partidos", etiqueta: "Partidos", icono: ICONO_SECCION.partidos },
   { href: "/estadisticas", etiqueta: "Tabla y estadísticas", icono: ICONO_SECCION.estadisticas },
   { href: "/bitacora", etiqueta: "Bitácora", icono: ICONO_SECCION.bitacora },
+  { href: "/cuenta", etiqueta: "Mi cuenta y plan", icono: ICONO_SECCION.cuenta },
+  { href: "/privacidad", etiqueta: "Privacidad y legal", icono: ICONO_SECCION.privacidad },
   {
     href: "/publico",
     etiqueta: "Vista pública",

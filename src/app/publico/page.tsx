@@ -12,7 +12,8 @@ import EncabezadoPagina from "@/components/ui/EncabezadoPagina";
 import Pestanas from "@/components/ui/Pestanas";
 import { ICONO_SECCION } from "@/components/iconosSeccion";
 import TarjetaPartido from "@/components/partidos/TarjetaPartido";
-import { calcularEstadisticasJugadores, calcularTabla } from "@/lib/rules";
+import { calcularEstadisticasJugadores, calcularTabla, esMenorDeEdad } from "@/lib/rules";
+import { nombrePublicable } from "@/lib/legal/reglas";
 
 type Pestana = "calendario" | "resultados" | "posiciones" | "goleo";
 
@@ -201,8 +202,9 @@ export default function VistaPublicaPage() {
                     <Tarjeta key={e.jugadorId} className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-ink">
-                          {jugador.numero ? `#${jugador.numero} ` : ""}
-                          {jugador.nombreCompleto}
+                          {nombrePublicable(esMenorDeEdad(jugador.fechaNacimiento), jugador.tutor?.publicarNombre)
+                            ? `${jugador.numero ? `#${jugador.numero} ` : ""}${jugador.nombreCompleto}`
+                            : `Dorsal #${jugador.numero ?? "—"}`}
                         </p>
                         <p className="text-xs text-muted">{nombreEquipo(jugador.equipoId)}</p>
                       </div>

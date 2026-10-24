@@ -7,6 +7,7 @@ import { useSimulador } from "@/context/SimuladorContext";
 import { calcularEstadisticasJugadores, estadoRegistro } from "@/lib/rules";
 import { fechaHoy } from "@/lib/fechas";
 import Tarjeta from "@/components/ui/Tarjeta";
+import Aviso from "@/components/ui/Aviso";
 import Boton from "@/components/ui/Boton";
 import Etiqueta from "@/components/ui/Etiqueta";
 import EncabezadoPagina from "@/components/ui/EncabezadoPagina";
@@ -95,6 +96,18 @@ export default function InicioPage() {
         titulo={liga.nombre}
         descripcion={temporadaActiva?.nombre}
       />
+
+      {rolActual === "administrador" && estado.legal.licencia.estado === "pendiente" && (
+        <Aviso intencion="warn" data-testid="aviso-licencia-pendiente">
+          <span className="block">
+            La licencia de la temporada está pendiente: el representante del Municipio debe aceptar las
+            Condiciones de Uso y Licencia (con código de verificación) para activarla.
+          </span>
+          <Link href="/licencia" className="mt-1 inline-flex items-center gap-1 underline">
+            Revisar y aceptar las Condiciones <ArrowRight size={14} />
+          </Link>
+        </Aviso>
+      )}
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {tarjetas.map((t, i) => (
