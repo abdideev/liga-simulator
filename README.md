@@ -44,9 +44,16 @@ antes de escribir una sola línea de código de producción.
   manual y los eventos se guardan en una cola local del navegador que se
   "sincroniza" (con una espera artificial) al desactivarlo. La cola y el
   cronómetro sí se conservan al salir de la mesa de control y volver.
+- **Cumplimiento legal simulado.** El registro con aviso y casillas, la
+  aceptación de las Condiciones con código de un solo uso, la constancia
+  con huella SHA-256, la cancelación del plan y las solicitudes ARCO
+  funcionan en la interfaz, pero el **correo es simulado** (el código se
+  muestra en pantalla), la **IP no se registra** (no hay servidor) y la
+  contraseña no se guarda. Los textos legales son plantillas académicas
+  (Entregable 8) que debe revisar un abogado.
 - No incluye convocatoria pública de equipos/jugadores libres (Fase 2),
-  solicitudes ARCO (RF-21), exportación de cédula y padrón (RF-22), pagos o
-  facturación, ni envío real de correos o SMS.
+  exportación de cédula y padrón (RF-22), pagos o facturación, ni envío
+  real de correos o SMS.
 
 ## Cómo ejecutarlo
 
@@ -163,6 +170,29 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
     auditoría: cada acción relevante queda con fecha, rol, el partido,
     equipo o categoría afectados (con nombres legibles) y el detalle.
 
+11. **Cumplimiento legal (Entregable 8).** Pulsa **Reiniciar** y:
+    - **Primer acceso** (`/`): antes de entrar, el administrador ve el aviso
+      de privacidad simplificado y dos casillas vacías (Términos de uso y
+      lectura del aviso). Al crear la cuenta se registran la versión y la
+      huella SHA-256 de ambos textos. Lo mismo pasa con cada delegado.
+    - **Condiciones de Uso y Licencia** (`/licencia`): las casillas se
+      habilitan solo al leer hasta el final; luego se pide un código de un
+      solo uso (correo simulado) y se genera la **constancia de aceptación**
+      con folio, huellas, horas y dispositivo.
+    - **Mi cuenta y plan** (`/cuenta`): resumen del plan ($500 por equipo
+      más IVA), constancias, **Cancelar plan** (aviso de no renovación con
+      motivo y confirmación, reversible) y descarga de los datos en JSON.
+      En *Derechos ARCO* se crea una solicitud con folio y plazo de 20 días
+      hábiles; el administrador la turna a la Unidad de Transparencia.
+    - **Privacidad y legal** (`/privacidad`, `/legal`): aviso integral,
+      simplificado e historial de versiones, consultables con cualquier rol
+      (incluida la vista pública y antes de registrarse); Términos,
+      Condiciones, consentimiento del tutor y créditos.
+    - **Menores**: al inscribir a un menor, el tutor declara la patria
+      potestad, marca el consentimiento 1 (obligatorio) y decide el 2
+      (nombre público). En la vista pública, el goleo muestra solo el
+      dorsal de los menores sin ese permiso.
+
 ## Comportamientos simulados (resumen)
 
 | Comportamiento | Cómo está simulado |
@@ -173,6 +203,9 @@ en unos 20 minutos. Conviene pulsar **Reiniciar** antes de empezar.
 | Cronómetro | Acelerado (1 minuto por segundo); persistido como marcas de tiempo |
 | Persistencia | `localStorage` del navegador con versión de esquema, no una base de datos |
 | Fotografías de jugador | Marcador de posición (iniciales), sin carga real de archivos |
+| Correo y código de verificación | El código de un solo uso se genera en el navegador y se muestra en un "correo simulado" |
+| Huellas digitales | SHA-256 real (Web Crypto) del texto exacto de cada documento y de cada constancia |
+| IP de la aceptación | No disponible sin servidor; la constancia lo indica |
 
 ## Decisiones de este ciclo
 
