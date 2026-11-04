@@ -76,6 +76,10 @@ describe("equipos (RF-06)", () => {
   it("respeta el cupo y no repite nombres en la categoría", () => {
     const s = simulador();
     expect(s.d({ tipo: "crearEquipo", datos: nuevo }).motivo).toBe("La categoría Libre ya alcanzó su cupo de 3 equipos");
+    // DEF-03: con el cupo lleno, un nombre repetido reporta el nombre (antes: el cupo).
+    expect(s.d({ tipo: "crearEquipo", datos: { ...nuevo, nombre: "Real Tulancingo FC" } }).motivo).toBe(
+      "Ya existe un equipo llamado Real Tulancingo FC en Libre"
+    );
     const libre = s.estado.categorias[0];
     expectOk(s.d({ tipo: "actualizarCategoria", categoriaId: "cat-1", datos: { nombre: libre.nombre, anioNacimientoMin: 1970, anioNacimientoMax: 2007, cupoEquipos: 5, limiteJugadoresPorPlantel: 20 } }));
     expectOk(s.d({ tipo: "crearEquipo", datos: nuevo }));

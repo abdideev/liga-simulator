@@ -236,13 +236,14 @@ const registro = {
           ? error("Todos los campos son obligatorios")
           : null,
       () => (cat ? null : error("Categoría no encontrada")),
-      () =>
-        cat && equiposCategoria.length >= cat.cupoEquipos
-          ? error(`La categoría ${cat.nombre} ya alcanzó su cupo de ${cat.cupoEquipos} equipos`)
-          : null,
+      // DEF-03: the more specific error (duplicate name) goes before the quota.
       () =>
         equiposCategoria.some((e) => e.nombre.toLowerCase() === nombre.toLowerCase())
           ? error(`Ya existe un equipo llamado ${nombre} en ${cat?.nombre}`)
+          : null,
+      () =>
+        cat && equiposCategoria.length >= cat.cupoEquipos
+          ? error(`La categoría ${cat.nombre} ya alcanzó su cupo de ${cat.cupoEquipos} equipos`)
           : null
     );
   },
