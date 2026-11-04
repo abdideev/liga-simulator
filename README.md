@@ -85,6 +85,21 @@ npm run start   # sirve el build de producción
 npm run lint    # revisa el código con ESLint
 ```
 
+## Pruebas y calidad (Entregable 9)
+
+```bash
+npm test                # 81 pruebas unitarias del dominio (Vitest)
+npm run test:cobertura  # lo mismo con cobertura; reporte HTML en reportes/cobertura
+npx playwright install chromium   # una sola vez
+npm run test:e2e        # 38 pruebas de punta a punta (Playwright): casos del E7,
+                        # legales, accesibilidad, seguridad, tiempos y celular
+npm run lint            # ESLint, 0 errores y 0 advertencias
+```
+
+`npm run test:e2e` compila y levanta la app en el puerto 3210. Si ya tienes
+el servidor corriendo, usa `PW_BASE_URL=http://localhost:3000 npm run test:e2e`.
+Los reportes HTML quedan en `reportes/e2e` (ignorados por git).
+
 ## Guion de demostración guiada
 
 Pensado para mostrarle al cliente una jornada completa, de principio a fin,
