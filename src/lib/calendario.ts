@@ -20,6 +20,9 @@ export interface OpcionesCalendario {
  * Generates a single round-robin (each team plays every other team once)
  * using the circle method. Handles an odd number of teams via a bye.
  */
+/** Used when the league has not configured venues yet (DEF-02: was `undefined`). */
+export const SEDE_POR_DEFINIR = "Sede por definir";
+
 export function generarCalendarioRoundRobin(opciones: OpcionesCalendario): Partido[] {
   const { categoriaId, equipoIds, fechaInicio, diasEntreJornadas, horaDefault, sedes, crearId } =
     opciones;
@@ -48,7 +51,7 @@ export function generarCalendarioRoundRobin(opciones: OpcionesCalendario): Parti
           equipoVisitanteId: visitante,
           fecha: sumarDiasISO(fechaInicio, ronda * diasEntreJornadas),
           hora: horaDefault,
-          sede: sedes[sedeIndice % sedes.length],
+          sede: sedes.length > 0 ? sedes[sedeIndice % sedes.length] : SEDE_POR_DEFINIR,
           estado: "programado",
           convocadosLocal: [],
           convocadosVisitante: [],
