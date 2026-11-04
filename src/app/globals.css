@@ -15,17 +15,17 @@
   /* Paleta base */
   --color-paper: #ffffff;
   --color-surface: #f9fafb;
-  --color-accent: #007bff;
-  --color-ok: #28a745;
+  --color-accent: #0070e8; /* antes #007bff: 3.98:1 con texto blanco; WCAG AA pide 4.5:1 (DEF-06) */
+  --color-ok: #218838; /* antes #28a745: 3.13:1 */
   --color-warn: #fbc37c;
-  --color-danger: #f31260;
+  --color-danger: #d6104f; /* antes #f31260: 4.14:1 */
   --color-ink: #11181c;
   --color-border: #e4e4e0;
 
   /* Derivados */
   --color-canvas: #f4f4f5; /* lienzo de la app y campos rellenos */
   --color-control: #ebebec; /* controles neutros, pistas de pestañas e interruptores */
-  --color-muted: #687076;
+  --color-muted: #60676d; /* antes #687076: 4.23:1 sobre los controles */
   --color-accent-ink: #0062cc;
   --color-accent-soft: #e6f1ff;
   --color-ok-ink: #1e7b34;

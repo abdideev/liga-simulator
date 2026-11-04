@@ -82,7 +82,7 @@ export default function BitacoraPage() {
                   </p>
                 ))}
                 {entrada.detalle && <p className="mt-1 text-muted">{entrada.detalle}</p>}
-                <p className="mt-2 text-xs text-muted/80">{formatearFecha(entrada.fecha)}</p>
+                <p className="mt-2 text-xs text-muted">{formatearFecha(entrada.fecha)}</p>
               </Tarjeta>
             </li>
           ))}

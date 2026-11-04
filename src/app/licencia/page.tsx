@@ -140,8 +140,12 @@ export default function LicenciaPage() {
           <div
             ref={contenedor}
             onScroll={alDesplazar}
-            className="max-h-[420px] overflow-y-auto rounded-2xl bg-canvas p-4"
+            className="max-h-[420px] overflow-y-auto rounded-2xl bg-canvas p-4 outline-none focus-visible:ring-2 focus-visible:ring-accent"
             data-testid="texto-condiciones"
+            // Focusable so keyboard users can scroll the contract (DEF-07, WCAG 2.1.1).
+            tabIndex={0}
+            role="region"
+            aria-label="Texto completo de las Condiciones de Uso y Licencia"
           >
             <VistaDocumento doc={CONDICIONES_LICENCIA} mostrarEncabezado={false} />
           </div>
