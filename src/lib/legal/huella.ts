@@ -31,29 +31,27 @@ export function useHuella(texto: string): string {
   return resultado.texto === texto ? resultado.huella : "";
 }
 
+const NAVEGADORES: [RegExp, string][] = [
+  [/Edg\//, "Edge"],
+  [/Chrome\//, "Chrome"],
+  [/Firefox\//, "Firefox"],
+  [/Safari\//, "Safari"],
+];
+const SISTEMAS: [RegExp, string][] = [
+  [/Android/, "Android"],
+  [/iPhone|iPad/, "iOS"],
+  [/Windows/, "Windows"],
+  [/Mac OS/, "macOS"],
+  [/Linux/, "Linux"],
+];
+
+function primeraCoincidencia(ua: string, tabla: [RegExp, string][], otro: string): string {
+  return tabla.find(([patron]) => patron.test(ua))?.[1] ?? otro;
+}
+
 /** Short description of the browser and OS, stored as the "dispositivo" of an acceptance. */
 export function describirDispositivo(): string {
   if (typeof navigator === "undefined") return "Desconocido";
   const ua = navigator.userAgent;
-  const navegador = /Edg\//.test(ua)
-    ? "Edge"
-    : /Chrome\//.test(ua)
-      ? "Chrome"
-      : /Firefox\//.test(ua)
-        ? "Firefox"
-        : /Safari\//.test(ua)
-          ? "Safari"
-          : "Navegador";
-  const sistema = /Android/.test(ua)
-    ? "Android"
-    : /iPhone|iPad/.test(ua)
-      ? "iOS"
-      : /Windows/.test(ua)
-        ? "Windows"
-        : /Mac OS/.test(ua)
-          ? "macOS"
-          : /Linux/.test(ua)
-            ? "Linux"
-            : "otro sistema";
-  return `${navegador} · ${sistema}`;
+  return `${primeraCoincidencia(ua, NAVEGADORES, "Navegador")} · ${primeraCoincidencia(ua, SISTEMAS, "otro sistema")}`;
 }

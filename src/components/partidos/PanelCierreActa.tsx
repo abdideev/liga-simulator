@@ -18,6 +18,113 @@ export interface FirmaLado {
   puedeFirmar: boolean;
 }
 
+function EtiquetaFirma({ firma }: { firma: FirmaLado }) {
+  if (firma.protesta) {
+    return (
+      <Etiqueta intencion="danger" icono={MessageSquareWarning}>
+        Protestó
+      </Etiqueta>
+    );
+  }
+  if (firma.confirmado) {
+    return (
+      <Etiqueta intencion="ok" icono={CheckCircle2}>
+        Confirmó
+      </Etiqueta>
+    );
+  }
+  return <Etiqueta intencion="warn">Pendiente</Etiqueta>;
+}
+
+function DetalleProtesta({ protesta }: { protesta: Protesta }) {
+  return (
+    <div className="space-y-1 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger-ink">
+      <p>
+        <span className="font-semibold">Motivo:</span> {protesta.motivo}
+      </p>
+      {protesta.resolucion && (
+        <p className="text-ink">
+          <span className="font-semibold">Resolución:</span> {protesta.resolucion.texto}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** "Firmar con protesta" button that opens the reason form. */
+function RedactarProtesta({
+  lado,
+  onProtestar,
+}: {
+  lado: Lado;
+  onProtestar: (motivo: string) => boolean;
+}) {
+  const [redactando, setRedactando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+
+  if (!redactando) {
+    return (
+      <Boton
+        intencion="danger"
+        variante="texto"
+        className="px-2"
+        onClick={() => setRedactando(true)}
+        data-testid={`boton-protestar-${lado}`}
+      >
+        <MessageSquareWarning size={16} />
+        Firmar con protesta
+      </Boton>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <textarea
+        className={`${claseCampo} min-h-20 py-2`}
+        value={motivo}
+        onChange={(e) => setMotivo(e.target.value)}
+        placeholder="Describe el motivo de la protesta (ej. gol en fuera de lugar no marcado, jugador no registrado en cancha)"
+        data-testid={`motivo-protesta-${lado}`}
+      />
+      <div className="flex gap-2">
+        <Boton
+          intencion="danger"
+          onClick={() => {
+            if (onProtestar(motivo)) {
+              setRedactando(false);
+              setMotivo("");
+            }
+          }}
+          data-testid={`boton-registrar-protesta-${lado}`}
+        >
+          Registrar protesta
+        </Boton>
+        <Boton intencion="neutral" variante="contorno" onClick={() => setRedactando(false)}>
+          Cancelar
+        </Boton>
+      </div>
+    </div>
+  );
+}
+
+function ResolverProtesta({ lado, onResolver }: { lado: Lado; onResolver: (texto: string) => boolean }) {
+  const [resolucion, setResolucion] = useState("");
+  return (
+    <div className="space-y-2 border-t border-control pt-3">
+      <input
+        className={claseCampo}
+        value={resolucion}
+        onChange={(e) => setResolucion(e.target.value)}
+        placeholder="Resolución del administrador o comisión disciplinaria"
+        data-testid={`campo-resolucion-${lado}`}
+      />
+      <Boton variante="suave" onClick={() => onResolver(resolucion)} data-testid={`boton-resolver-protesta-${lado}`}>
+        <Gavel size={16} />
+        Registrar resolución
+      </Boton>
+    </div>
+  );
+}
+
 function BloqueFirma({
   firma,
   actaCerrada,
@@ -37,11 +144,10 @@ function BloqueFirma({
   onRetirarProtesta: () => ResultadoOperacion;
   onResolver: (texto: string) => ResultadoOperacion;
 }) {
-  const [redactando, setRedactando] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [resolucion, setResolucion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const editable = firma.puedeFirmar && !actaCerrada && enCurso;
+  const { protesta } = firma;
+  const pendienteDeResolver = actaCerrada && !!protesta && !protesta.resolucion && puedeResolver;
 
   function reportar(resultado: ResultadoOperacion): boolean {
     setError(resultado.ok ? null : (resultado.motivo ?? "No se pudo completar la acción"));
@@ -49,26 +155,13 @@ function BloqueFirma({
   }
 
   return (
-    <div
-      className="space-y-3 rounded-2xl bg-canvas p-4"
-      data-testid={`firma-${firma.lado}`}
-    >
+    <div className="space-y-3 rounded-2xl bg-canvas p-4" data-testid={`firma-${firma.lado}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-ink">Delegado de {firma.nombreEquipo}</p>
-        {firma.protesta ? (
-          <Etiqueta intencion="danger" icono={MessageSquareWarning}>
-            Protestó
-          </Etiqueta>
-        ) : firma.confirmado ? (
-          <Etiqueta intencion="ok" icono={CheckCircle2}>
-            Confirmó
-          </Etiqueta>
-        ) : (
-          <Etiqueta intencion="warn">Pendiente</Etiqueta>
-        )}
+        <EtiquetaFirma firma={firma} />
       </div>
 
-      {!firma.protesta && !actaCerrada && (
+      {!protesta && !actaCerrada && (
         <label className="flex min-h-11 items-center gap-2.5 text-sm text-ink">
           <input
             type="checkbox"
@@ -81,62 +174,13 @@ function BloqueFirma({
         </label>
       )}
 
-      {firma.protesta && (
-        <div className="space-y-1 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger-ink">
-          <p>
-            <span className="font-semibold">Motivo:</span> {firma.protesta.motivo}
-          </p>
-          {firma.protesta.resolucion && (
-            <p className="text-ink">
-              <span className="font-semibold">Resolución:</span> {firma.protesta.resolucion.texto}
-            </p>
-          )}
-        </div>
+      {protesta && <DetalleProtesta protesta={protesta} />}
+
+      {editable && !protesta && !firma.confirmado && (
+        <RedactarProtesta lado={firma.lado} onProtestar={(motivo) => reportar(onProtestar(motivo))} />
       )}
 
-      {editable && !firma.protesta && !firma.confirmado && !redactando && (
-        <Boton
-          intencion="danger"
-          variante="texto"
-          className="px-2"
-          onClick={() => setRedactando(true)}
-          data-testid={`boton-protestar-${firma.lado}`}
-        >
-          <MessageSquareWarning size={16} />
-          Firmar con protesta
-        </Boton>
-      )}
-
-      {editable && redactando && !firma.protesta && (
-        <div className="space-y-2">
-          <textarea
-            className={`${claseCampo} min-h-20 py-2`}
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Describe el motivo de la protesta (ej. gol en fuera de lugar no marcado, jugador no registrado en cancha)"
-            data-testid={`motivo-protesta-${firma.lado}`}
-          />
-          <div className="flex gap-2">
-            <Boton
-              intencion="danger"
-              onClick={() => {
-                if (reportar(onProtestar(motivo))) {
-                  setRedactando(false);
-                  setMotivo("");
-                }
-              }}
-              data-testid={`boton-registrar-protesta-${firma.lado}`}
-            >
-              Registrar protesta
-            </Boton>
-            <Boton intencion="neutral" variante="contorno" onClick={() => setRedactando(false)}>
-              Cancelar
-            </Boton>
-          </div>
-        </div>
-      )}
-
-      {editable && firma.protesta && (
+      {editable && protesta && (
         <Boton
           intencion="neutral"
           variante="contorno"
@@ -147,24 +191,8 @@ function BloqueFirma({
         </Boton>
       )}
 
-      {actaCerrada && firma.protesta && !firma.protesta.resolucion && puedeResolver && (
-        <div className="space-y-2 border-t border-control pt-3">
-          <input
-            className={claseCampo}
-            value={resolucion}
-            onChange={(e) => setResolucion(e.target.value)}
-            placeholder="Resolución del administrador o comisión disciplinaria"
-            data-testid={`campo-resolucion-${firma.lado}`}
-          />
-          <Boton
-            variante="suave"
-            onClick={() => reportar(onResolver(resolucion))}
-            data-testid={`boton-resolver-protesta-${firma.lado}`}
-          >
-            <Gavel size={16} />
-            Registrar resolución
-          </Boton>
-        </div>
+      {pendienteDeResolver && (
+        <ResolverProtesta lado={firma.lado} onResolver={(texto) => reportar(onResolver(texto))} />
       )}
 
       {error && <Aviso intencion="danger">{error}</Aviso>}

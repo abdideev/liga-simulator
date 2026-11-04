@@ -3,9 +3,15 @@
 
 export type CrearId = (prefijo: string) => string;
 
-/** Default generator for the running app: unique across reloads. */
-export const crearIdAleatorio: CrearId = (prefijo) =>
-  `${prefijo}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+/**
+ * Default generator for the running app: unique across reloads. Uses the
+ * Web Crypto RNG (available on plain-HTTP LAN origins too, unlike randomUUID).
+ */
+export const crearIdAleatorio: CrearId = (prefijo) => {
+  const bytes = crypto.getRandomValues(new Uint8Array(4));
+  const sufijo = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${prefijo}-${Date.now()}-${sufijo}`;
+};
 
 /** Deterministic generator: prefijo-1, prefijo-2, … with one counter per prefix. */
 export function crearGeneradorSecuencial(): CrearId {

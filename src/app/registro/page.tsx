@@ -18,6 +18,36 @@ import { ICONO_SECCION } from "@/components/iconosSeccion";
 
 type Formulario = { categoriaId: string; tipo: "cierre" | "ventana" } | null;
 
+const ETIQUETA_ESTADO = {
+  abierto: { intencion: "ok", icono: LockOpen, texto: "Abierto" },
+  extemporaneo: { intencion: "warn", icono: CalendarClock, texto: "Ventana extemporánea" },
+  cerrado: { intencion: "neutral", icono: CheckCircle2, texto: "Cerrado" },
+} as const;
+
+function EtiquetaRegistro({ estado }: { estado: keyof typeof ETIQUETA_ESTADO }) {
+  const { intencion, icono, texto } = ETIQUETA_ESTADO[estado];
+  return (
+    <Etiqueta intencion={intencion} icono={icono}>
+      {texto}
+    </Etiqueta>
+  );
+}
+
+const TEXTO_FORMULARIO = {
+  cierre: {
+    campoFecha: "Fecha de cierre",
+    intencion: "danger",
+    testId: "boton-confirmar-cierre",
+    boton: "Confirmar cierre de registro",
+  },
+  ventana: {
+    campoFecha: "Altas permitidas hasta",
+    intencion: "warn",
+    testId: "boton-confirmar-ventana",
+    boton: "Abrir ventana extemporánea",
+  },
+} as const;
+
 export default function CierreRegistroPage() {
   const { estado, despachar } = useSimulador();
   const { categorias, equipos, jugadores } = estado;
@@ -91,21 +121,7 @@ export default function CierreRegistroPage() {
                     {extemporaneos > 0 && ` · ${extemporaneos} alta(s) extemporánea(s)`}
                   </p>
                 </div>
-                {estadoActual === "abierto" && (
-                  <Etiqueta intencion="ok" icono={LockOpen}>
-                    Abierto
-                  </Etiqueta>
-                )}
-                {estadoActual === "extemporaneo" && (
-                  <Etiqueta intencion="warn" icono={CalendarClock}>
-                    Ventana extemporánea
-                  </Etiqueta>
-                )}
-                {estadoActual === "cerrado" && (
-                  <Etiqueta intencion="neutral" icono={CheckCircle2}>
-                    Cerrado
-                  </Etiqueta>
-                )}
+                <EtiquetaRegistro estado={estadoActual} />
               </div>
 
               {categoria.registroCerrado && (
@@ -125,9 +141,7 @@ export default function CierreRegistroPage() {
               {formularioAbierto ? (
                 <div className="mt-5 space-y-4 rounded-2xl bg-canvas p-4">
                   <Campo
-                    etiqueta={
-                      formulario.tipo === "cierre" ? "Fecha de cierre" : "Altas permitidas hasta"
-                    }
+                    etiqueta={TEXTO_FORMULARIO[formulario.tipo].campoFecha}
                   >
                     <input
                       type="date"
@@ -159,17 +173,11 @@ export default function CierreRegistroPage() {
                   {error && <Aviso intencion="danger">{error}</Aviso>}
                   <div className="flex flex-wrap gap-2">
                     <Boton
-                      intencion={formulario.tipo === "cierre" ? "danger" : "warn"}
+                      intencion={TEXTO_FORMULARIO[formulario.tipo].intencion}
                       onClick={() => confirmar(categoria)}
-                      data-testid={
-                        formulario.tipo === "cierre"
-                          ? "boton-confirmar-cierre"
-                          : "boton-confirmar-ventana"
-                      }
+                      data-testid={TEXTO_FORMULARIO[formulario.tipo].testId}
                     >
-                      {formulario.tipo === "cierre"
-                        ? "Confirmar cierre de registro"
-                        : "Abrir ventana extemporánea"}
+                      {TEXTO_FORMULARIO[formulario.tipo].boton}
                     </Boton>
                     <Boton intencion="neutral" variante="contorno" onClick={() => setFormulario(null)}>
                       Cancelar

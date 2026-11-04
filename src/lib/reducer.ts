@@ -174,589 +174,611 @@ function recalcularElegibilidadCategoria(
 // Reducer
 // ---------------------------------------------------------------------------
 
+// One handler per action type. Every handler receives an action that already
+// passed validarAccion, so lookups it relies on are guaranteed to exist.
+
+interface Momento {
+  ahoraMs: number;
+  hoy: string;
+}
+
+type Manejador<T extends AccionSimulador["tipo"]> = (
+  estado: SimuladorState,
+  accion: Extract<AccionSimulador, { tipo: T }>,
+  entorno: EntornoReducer,
+  momento: Momento
+) => SimuladorState;
+
+const MANEJADORES: { [T in AccionSimulador["tipo"]]: Manejador<T> } = {
+  cambiarRol: (estado, accion) => {
+    const equipoDelegadoId =
+      accion.rol === "delegado" && !estado.equipoDelegadoId
+        ? (estado.equipos[0]?.id ?? null)
+        : estado.equipoDelegadoId;
+    return { ...estado, rolActual: accion.rol, equipoDelegadoId };
+  },
+
+  seleccionarEquipoDelegado: (estado, accion) => {
+    return { ...estado, equipoDelegadoId: accion.equipoId };
+  },
+
+  actualizarConfiguracionLiga: (estado, accion, entorno) => {
+    const siguiente: SimuladorState = {
+      ...estado,
+      liga: { ...estado.liga, nombre: accion.nombreLiga.trim() },
+      temporadas: estado.temporadas.map((t) =>
+        t.id === estado.liga.temporadaActivaId
+          ? { ...t, nombre: accion.nombreTemporada.trim() }
+          : t
+      ),
+    };
+    return conBitacora(
+      siguiente,
+      entorno,
+      "Actualización de configuración de liga",
+      `${accion.nombreLiga.trim()} — ${accion.nombreTemporada.trim()}`
+    );
+  },
+
+  crearCategoria: (estado, accion, entorno) => {
+    const nueva: Categoria = {
+      ...accion.datos,
+      nombre: accion.datos.nombre.trim(),
+      id: entorno.crearId("cat"),
+      temporadaId: estado.liga.temporadaActivaId,
+      registroCerrado: false,
+    };
+    return conBitacora(
+      { ...estado, categorias: [...estado.categorias, nueva] },
+      entorno,
+      "Creación de categoría",
+      nueva.nombre,
+      { categoriaId: nueva.id }
+    );
+  },
+
+  actualizarCategoria: (estado, accion, entorno) => {
+    const anterior = estado.categorias.find((c) => c.id === accion.categoriaId)!;
+    const actualizada: Categoria = {
+      ...anterior,
+      ...accion.datos,
+      nombre: accion.datos.nombre.trim(),
+    };
+    const equipoIds = estado.equipos
+      .filter((e) => e.categoriaId === actualizada.id)
+      .map((e) => e.id);
+    const { jugadores, cambios } = recalcularElegibilidadCategoria(
+      estado.jugadores,
+      equipoIds,
+      actualizada
+    );
+    return conBitacora(
+      {
+        ...estado,
+        categorias: estado.categorias.map((c) => (c.id === actualizada.id ? actualizada : c)),
+        jugadores,
+      },
+      entorno,
+      "Actualización de categoría",
+      cambios > 0
+        ? `${actualizada.nombre} — ${cambios} jugador(es) cambiaron de estado de elegibilidad`
+        : actualizada.nombre,
+      { categoriaId: actualizada.id }
+    );
+  },
+
+  cerrarRegistroCategoria: (estado, accion, entorno) => {
+    const siguiente: SimuladorState = {
+      ...estado,
+      categorias: estado.categorias.map((c) =>
+        c.id === accion.categoriaId
+          ? {
+              ...c,
+              registroCerrado: true,
+              fechaCierreRegistro: accion.fecha,
+              ventanaExtemporanea: undefined,
+            }
+          : c
+      ),
+    };
+    return conBitacora(
+      siguiente,
+      entorno,
+      "Cierre de registro de categoría",
+      `${nombreCategoria(estado, accion.categoriaId)} — congelado al ${accion.fecha}`,
+      { categoriaId: accion.categoriaId }
+    );
+  },
+
+  abrirVentanaExtemporanea: (estado, accion, entorno, { hoy }) => {
+    const siguiente: SimuladorState = {
+      ...estado,
+      categorias: estado.categorias.map((c) =>
+        c.id === accion.categoriaId
+          ? {
+              ...c,
+              ventanaExtemporanea: {
+                abiertaEl: hoy,
+                hasta: accion.hasta,
+                motivo: accion.motivo.trim(),
+              },
+            }
+          : c
+      ),
+    };
+    return conBitacora(
+      siguiente,
+      entorno,
+      "Apertura de ventana de altas extemporáneas",
+      `${nombreCategoria(estado, accion.categoriaId)} — hasta el ${accion.hasta}: ${accion.motivo.trim()}`,
+      { categoriaId: accion.categoriaId }
+    );
+  },
+
+  cerrarVentanaExtemporanea: (estado, accion, entorno) => {
+    const siguiente: SimuladorState = {
+      ...estado,
+      categorias: estado.categorias.map((c) =>
+        c.id === accion.categoriaId ? { ...c, ventanaExtemporanea: undefined } : c
+      ),
+    };
+    return conBitacora(
+      siguiente,
+      entorno,
+      "Cierre de ventana de altas extemporáneas",
+      nombreCategoria(estado, accion.categoriaId),
+      { categoriaId: accion.categoriaId }
+    );
+  },
+
+  crearEquipo: (estado, accion, entorno) => {
+    const { datos } = accion;
+    const nuevo = {
+      id: entorno.crearId("equipo"),
+      categoriaId: datos.categoriaId,
+      nombre: datos.nombre.trim(),
+      delegado: { nombre: datos.delegado.nombre.trim(), telefono: datos.delegado.telefono.trim() },
+    };
+    return conBitacora(
+      { ...estado, equipos: [...estado.equipos, nuevo] },
+      entorno,
+      "Registro de equipo",
+      `${nuevo.nombre} — ${nombreCategoria(estado, nuevo.categoriaId)}`,
+      { equipoId: nuevo.id, categoriaId: nuevo.categoriaId }
+    );
+  },
+
+  crearJugador: (estado, accion, entorno, { hoy }) => {
+    const { datos } = accion;
+    const equipo = estado.equipos.find((e) => e.id === datos.equipoId)!;
+    const categoria = estado.categorias.find((c) => c.id === equipo.categoriaId)!;
+    const curp = datos.curp.trim().toUpperCase();
+    const { estado: estadoElegibilidad, motivoRevision } = calcularElegibilidad(
+      datos.fechaNacimiento,
+      curp,
+      categoria
+    );
+    const extemporanea = estadoRegistro(categoria, hoy) === "extemporaneo";
+    const menor = esMenorDeEdad(datos.fechaNacimiento, entorno.ahora);
+
+    const nuevo: Jugador = {
+      id: entorno.crearId("jugador"),
+      equipoId: equipo.id,
+      nombreCompleto: datos.nombreCompleto.trim(),
+      fechaNacimiento: datos.fechaNacimiento,
+      curp,
+      numero: datos.numero,
+      fotoUrl: datos.fotoUrl,
+      estadoElegibilidad,
+      motivoRevision,
+      tutor: menor && datos.tutor ? { ...datos.tutor, fecha: entorno.ahora.toISOString() } : undefined,
+      ...(extemporanea && { altaExtemporanea: true }),
+    };
+
+    return conBitacora(
+      { ...estado, jugadores: [...estado.jugadores, nuevo] },
+      entorno,
+      extemporanea ? "Inscripción extemporánea de jugador" : "Inscripción de jugador",
+      `${nuevo.nombreCompleto} — ${equipo.nombre} (${estadoElegibilidad})${
+        nuevo.tutor
+          ? ` · consentimiento del tutor v${nuevo.tutor.versionAviso ?? "1.0"}; nombre público: ${nuevo.tutor.publicarNombre ? "sí" : "no, solo dorsal"}`
+          : ""
+      }`,
+      { jugadorId: nuevo.id, equipoId: equipo.id }
+    );
+  },
+
+  establecerOverrideAdmin: (estado, accion, entorno) => {
+    const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId)!;
+    return conBitacora(
+      {
+        ...estado,
+        jugadores: estado.jugadores.map((j) =>
+          j.id === accion.jugadorId ? { ...j, overrideAdmin: accion.override } : j
+        ),
+      },
+      entorno,
+      "Anulación manual de elegibilidad",
+      accion.override
+        ? `${jugador.nombreCompleto} — ${accion.override.motivo}`
+        : `${jugador.nombreCompleto} — anulación retirada`,
+      { jugadorId: jugador.id, equipoId: jugador.equipoId }
+    );
+  },
+
+  generarCalendario: (estado, accion, entorno) => {
+    const equipoIds = estado.equipos
+      .filter((e) => e.categoriaId === accion.categoriaId)
+      .map((e) => e.id);
+    const conservados = estado.partidos.filter(
+      (p) => p.categoriaId !== accion.categoriaId || p.estado !== "programado"
+    );
+    const nuevos = generarCalendarioRoundRobin({
+      categoriaId: accion.categoriaId,
+      equipoIds,
+      ...accion.opciones,
+      crearId: () => entorno.crearId("partido"),
+    });
+    return conBitacora(
+      { ...estado, partidos: [...conservados, ...nuevos] },
+      entorno,
+      "Generación de calendario",
+      `${nombreCategoria(estado, accion.categoriaId)} — ${nuevos.length} partido(s)`,
+      { categoriaId: accion.categoriaId }
+    );
+  },
+
+  actualizarConvocados: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const anteriores = convocadosDelLado(partido, accion.lado);
+    const convocados = Array.from(new Set(accion.jugadorIds));
+    // Keep starters still called up, then promote new call-ups to starters
+    // until the starting eleven is full.
+    const titulares = titularesDelLado(partido, accion.lado).filter((id) =>
+      convocados.includes(id)
+    );
+    for (const id of convocados) {
+      if (!anteriores.includes(id) && titulares.length < MAX_TITULARES) titulares.push(id);
+    }
+    const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
+    return conBitacora(
+      conPartido(estado, partido.id, (p) => conLado(p, accion.lado, { convocados, titulares })),
+      entorno,
+      "Actualización de convocados",
+      `${nombreEquipo(estado, equipoId)} — ${convocados.length} convocado(s), ${titulares.length} titular(es)`,
+      { partidoId: partido.id, equipoId }
+    );
+  },
+
+  alternarTitular: (estado, accion) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const actuales = titularesDelLado(partido, accion.lado);
+    const titulares = actuales.includes(accion.jugadorId)
+      ? actuales.filter((id) => id !== accion.jugadorId)
+      : [...actuales, accion.jugadorId];
+    return conPartido(estado, partido.id, (p) => conLado(p, accion.lado, { titulares }));
+  },
+
+  iniciarPartido: (estado, accion, entorno, { ahoraMs }) => {
+    const siguiente = conMesa(
+      conPartido(estado, accion.partidoId, (p) => ({ ...p, estado: "en_curso" })),
+      accion.partidoId,
+      (mesa) => ({ ...mesa, minutoBase: 0, cronometroDesde: ahoraMs })
+    );
+    return conBitacora(siguiente, entorno, "Inicio de partido", undefined, {
+      partidoId: accion.partidoId,
+    });
+  },
+
+  alternarCronometro: (estado, accion, _entorno, { ahoraMs }) => {
+    return conMesa(estado, accion.partidoId, (mesa) =>
+      mesa.cronometroDesde === null
+        ? reanudarCronometro(mesa, ahoraMs)
+        : pausarCronometro(mesa, ahoraMs)
+    );
+  },
+
+  ajustarMinuto: (estado, accion, _entorno, { ahoraMs }) => {
+    return conMesa(estado, accion.partidoId, (mesa) => ajustarMinuto(mesa, accion.delta, ahoraMs));
+  },
+
+  agregarEvento: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const evento: EventoPartido = {
+      ...accion.evento,
+      id: entorno.crearId("evento"),
+      partidoId: partido.id,
+    };
+    return conBitacora(
+      conPartido(estado, partido.id, (p) => conEventos(p, [...p.eventos, evento])),
+      entorno,
+      "Registro de evento de partido",
+      describirEvento(estado, evento) + (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
+      { partidoId: partido.id, jugadorId: evento.jugadorId }
+    );
+  },
+
+  eliminarEvento: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const evento = partido.eventos.find((e) => e.id === accion.eventoId)!;
+    return conBitacora(
+      conPartido(estado, partido.id, (p) =>
+        conEventos(
+          p,
+          p.eventos.filter((e) => e.id !== accion.eventoId)
+        )
+      ),
+      entorno,
+      "Eliminación de evento de partido",
+      describirEvento(estado, evento) + (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
+      { partidoId: partido.id, jugadorId: evento.jugadorId }
+    );
+  },
+
+  establecerModoOffline: (estado, accion) => {
+    return conMesa(estado, accion.partidoId, (mesa) => ({ ...mesa, modoOffline: accion.activo }));
+  },
+
+  encolarEventoOffline: (estado, accion, entorno) => {
+    const pendiente: EventoPartido = {
+      ...accion.evento,
+      id: entorno.crearId("pendiente"),
+      partidoId: accion.partidoId,
+      registradoOffline: true,
+    };
+    return conMesa(estado, accion.partidoId, (mesa) => ({
+      ...mesa,
+      colaPendiente: [...mesa.colaPendiente, pendiente],
+    }));
+  },
+
+  descartarEventoOffline: (estado, accion) => {
+    return conMesa(estado, accion.partidoId, (mesa) => ({
+      ...mesa,
+      colaPendiente: mesa.colaPendiente.filter((e) => e.id !== accion.eventoId),
+    }));
+  },
+
+  sincronizarColaOffline: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const cola = obtenerMesa(estado.mesas, partido.id).colaPendiente;
+    const sinCola = conMesa(estado, partido.id, (mesa) => ({
+      ...mesa,
+      colaPendiente: [],
+      modoOffline: false,
+    }));
+    if (cola.length === 0) return sinCola;
+    const sincronizados = cola.map((e) => ({
+      ...e,
+      id: entorno.crearId("evento"),
+      registradoOffline: true,
+    }));
+    return conBitacora(
+      conPartido(sinCola, partido.id, (p) => conEventos(p, [...p.eventos, ...sincronizados])),
+      entorno,
+      "Sincronización de eventos capturados sin conexión",
+      `${sincronizados.length} evento(s)` +
+        (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
+      { partidoId: partido.id }
+    );
+  },
+
+  establecerConfirmacion: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
+    return conBitacora(
+      conPartido(estado, partido.id, (p) =>
+        accion.lado === "local"
+          ? { ...p, confirmacionDelegadoLocal: accion.confirmado }
+          : { ...p, confirmacionDelegadoVisitante: accion.confirmado }
+      ),
+      entorno,
+      accion.confirmado ? "Confirmación de delegado" : "Confirmación de delegado retirada",
+      `${nombreEquipo(estado, equipoId)} (${ETIQUETA_LADO[accion.lado]})`,
+      { partidoId: partido.id, equipoId }
+    );
+  },
+
+  registrarProtesta: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
+    const protesta = { motivo: accion.motivo.trim(), fecha: entorno.ahora.toISOString() };
+    return conBitacora(
+      conPartido(estado, partido.id, (p) =>
+        accion.lado === "local"
+          ? { ...p, protestaLocal: protesta, confirmacionDelegadoLocal: false }
+          : { ...p, protestaVisitante: protesta, confirmacionDelegadoVisitante: false }
+      ),
+      entorno,
+      "Protesta de delegado",
+      `${nombreEquipo(estado, equipoId)}: ${protesta.motivo}`,
+      { partidoId: partido.id, equipoId }
+    );
+  },
+
+  retirarProtesta: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
+    return conBitacora(
+      conPartido(estado, partido.id, (p) =>
+        accion.lado === "local"
+          ? { ...p, protestaLocal: undefined }
+          : { ...p, protestaVisitante: undefined }
+      ),
+      entorno,
+      "Protesta retirada",
+      nombreEquipo(estado, equipoId),
+      { partidoId: partido.id, equipoId }
+    );
+  },
+
+  cerrarActa: (estado, accion, entorno, { ahoraMs }) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const siguiente = conMesa(
+      conPartido(estado, partido.id, (p) => ({ ...p, actaCerrada: true, estado: "finalizado" })),
+      partido.id,
+      (mesa) => pausarCronometro(mesa, ahoraMs)
+    );
+    const conProtesta = partido.protestaLocal || partido.protestaVisitante;
+    return conBitacora(
+      siguiente,
+      entorno,
+      conProtesta ? "Cierre de acta con protesta" : "Cierre de acta",
+      `${nombreEquipo(estado, partido.equipoLocalId)} ${partido.golesLocal} - ${partido.golesVisitante} ${nombreEquipo(estado, partido.equipoVisitanteId)}`,
+      { partidoId: partido.id }
+    );
+  },
+
+  resolverProtesta: (estado, accion, entorno) => {
+    const partido = buscarPartido(estado, accion.partidoId);
+    const resolucion = { texto: accion.texto.trim(), fecha: entorno.ahora.toISOString() };
+    const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
+    return conBitacora(
+      conPartido(estado, partido.id, (p) =>
+        accion.lado === "local"
+          ? { ...p, protestaLocal: { ...p.protestaLocal!, resolucion } }
+          : { ...p, protestaVisitante: { ...p.protestaVisitante!, resolucion } }
+      ),
+      entorno,
+      "Resolución de protesta",
+      `${nombreEquipo(estado, equipoId)}: ${resolucion.texto}`,
+      { partidoId: partido.id, equipoId }
+    );
+  },
+
+  aceptarTerminos: (estado, accion, entorno) => {
+    const aceptacion: AceptacionTerminos = {
+      ...accion.aceptacion,
+      nombre: accion.aceptacion.nombre.trim(),
+      correo: accion.aceptacion.correo.trim(),
+      id: entorno.crearId("aceptacion"),
+      fecha: entorno.ahora.toISOString(),
+    };
+    return conBitacora(
+      { ...estado, legal: { ...estado.legal, aceptaciones: [...estado.legal.aceptaciones, aceptacion] } },
+      entorno,
+      `Aceptación de Términos de uso v${aceptacion.versionTerminos}`,
+      `${aceptacion.nombre} (${aceptacion.correo}) — huella ${aceptacion.huellaTerminos.slice(0, 12)}… · aviso v${aceptacion.versionAviso} mostrado`
+    );
+  },
+
+  registrarConstancia: (estado, accion, entorno) => {
+    const c = accion.constancia;
+    return conBitacora(
+      {
+        ...estado,
+        legal: {
+          ...estado.legal,
+          constancias: [...estado.legal.constancias, c],
+          licencia: { ...estado.legal.licencia, estado: "activa", folioConstanciaVigente: c.folio, cancelacion: undefined },
+        },
+      },
+      entorno,
+      `Aceptación de Condiciones de Uso y Licencia v${c.version}`,
+      `Folio ${c.folio} — ${c.representante} (${c.cargo}) · código verificado · huella ${c.huellaTexto.slice(0, 12)}…`
+    );
+  },
+
+  cancelarPlan: (estado, accion, entorno) => {
+    const cancelacion = {
+      solicitadaEl: entorno.ahora.toISOString(),
+      motivo: accion.motivo,
+      detalle: accion.detalle?.trim() || undefined,
+      efectivaEl: accion.efectivaEl,
+      solicitadaPor: estado.legal.administrador.nombre,
+    };
+    return conBitacora(
+      {
+        ...estado,
+        legal: {
+          ...estado.legal,
+          licencia: { ...estado.legal.licencia, estado: "cancelacion_programada", cancelacion },
+        },
+      },
+      entorno,
+      "Cancelación del plan (aviso de no renovación)",
+      `El servicio termina el ${accion.efectivaEl}; después se entregan y suprimen los datos de la liga`
+    );
+  },
+
+  revertirCancelacionPlan: (estado, _accion, entorno) => {
+    return conBitacora(
+      {
+        ...estado,
+        legal: { ...estado.legal, licencia: { ...estado.legal.licencia, estado: "activa", cancelacion: undefined } },
+      },
+      entorno,
+      "Reversión de la cancelación del plan",
+      "La licencia vuelve a renovarse automáticamente"
+    );
+  },
+
+  registrarDescargaDatos: (estado, accion, entorno) => {
+    return conBitacora(estado, entorno, "Exportación de los datos de la liga", `Formato ${accion.formato} (portabilidad)`);
+  },
+
+  crearSolicitudArco: (estado, accion, entorno, { hoy }) => {
+    const anio = entorno.ahora.getFullYear();
+    const folio = `ARCO-${anio}-${String(estado.legal.solicitudesArco.length + 1).padStart(4, "0")}`;
+    const solicitud: SolicitudArco = {
+      folio,
+      ...accion.solicitud,
+      descripcion: accion.solicitud.descripcion.trim(),
+      medio: accion.solicitud.medio.trim(),
+      fecha: entorno.ahora.toISOString(),
+      venceEl: sumarDiasHabiles(hoy, 20),
+      turnarAntesDe: sumarDiasHabiles(hoy, 2),
+      estado: "recibida",
+    };
+    return conBitacora(
+      { ...estado, legal: { ...estado.legal, solicitudesArco: [...estado.legal.solicitudesArco, solicitud] } },
+      entorno,
+      `Solicitud ARCO recibida (${solicitud.tipo})`,
+      `Folio ${folio} — ${solicitud.nombre}; vence el ${solicitud.venceEl}`
+    );
+  },
+
+  turnarSolicitudArco: (estado, accion, entorno) => {
+    return conBitacora(
+      {
+        ...estado,
+        legal: {
+          ...estado.legal,
+          solicitudesArco: estado.legal.solicitudesArco.map((s) =>
+            s.folio === accion.folio ? { ...s, estado: "turnada", turnadaEl: entorno.ahora.toISOString() } : s
+          ),
+        },
+      },
+      entorno,
+      "Solicitud ARCO turnada a la Unidad de Transparencia",
+      `Folio ${accion.folio}`
+    );
+  },
+
+  cambiarPublicacionNombre: (estado, accion, entorno) => {
+    const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId)!;
+    return conBitacora(
+      {
+        ...estado,
+        jugadores: estado.jugadores.map((j) =>
+          j.id === jugador.id ? { ...j, tutor: { ...j.tutor!, publicarNombre: accion.publicar } } : j
+        ),
+      },
+      entorno,
+      accion.publicar ? "Consentimiento 2 otorgado (nombre público)" : "Consentimiento 2 revocado (solo dorsal)",
+      `${jugador.nombreCompleto} — por su tutor ${jugador.tutor!.nombre}`,
+      { jugadorId: jugador.id, equipoId: jugador.equipoId }
+    );
+  },
+};
+
 export function simuladorReducer(
   estado: SimuladorState,
   accion: AccionSimulador,
   entorno: EntornoReducer
 ): SimuladorState {
   if (!validarAccion(estado, accion, entorno).ok) return estado;
-
-  const ahoraMs = entorno.ahora.getTime();
-  const hoy = fechaISOLocal(entorno.ahora);
-
-  switch (accion.tipo) {
-    case "cambiarRol": {
-      const equipoDelegadoId =
-        accion.rol === "delegado" && !estado.equipoDelegadoId
-          ? (estado.equipos[0]?.id ?? null)
-          : estado.equipoDelegadoId;
-      return { ...estado, rolActual: accion.rol, equipoDelegadoId };
-    }
-
-    case "seleccionarEquipoDelegado":
-      return { ...estado, equipoDelegadoId: accion.equipoId };
-
-    case "actualizarConfiguracionLiga": {
-      const siguiente: SimuladorState = {
-        ...estado,
-        liga: { ...estado.liga, nombre: accion.nombreLiga.trim() },
-        temporadas: estado.temporadas.map((t) =>
-          t.id === estado.liga.temporadaActivaId
-            ? { ...t, nombre: accion.nombreTemporada.trim() }
-            : t
-        ),
-      };
-      return conBitacora(
-        siguiente,
-        entorno,
-        "Actualización de configuración de liga",
-        `${accion.nombreLiga.trim()} — ${accion.nombreTemporada.trim()}`
-      );
-    }
-
-    case "crearCategoria": {
-      const nueva: Categoria = {
-        ...accion.datos,
-        nombre: accion.datos.nombre.trim(),
-        id: entorno.crearId("cat"),
-        temporadaId: estado.liga.temporadaActivaId,
-        registroCerrado: false,
-      };
-      return conBitacora(
-        { ...estado, categorias: [...estado.categorias, nueva] },
-        entorno,
-        "Creación de categoría",
-        nueva.nombre,
-        { categoriaId: nueva.id }
-      );
-    }
-
-    case "actualizarCategoria": {
-      const anterior = estado.categorias.find((c) => c.id === accion.categoriaId)!;
-      const actualizada: Categoria = {
-        ...anterior,
-        ...accion.datos,
-        nombre: accion.datos.nombre.trim(),
-      };
-      const equipoIds = estado.equipos
-        .filter((e) => e.categoriaId === actualizada.id)
-        .map((e) => e.id);
-      const { jugadores, cambios } = recalcularElegibilidadCategoria(
-        estado.jugadores,
-        equipoIds,
-        actualizada
-      );
-      return conBitacora(
-        {
-          ...estado,
-          categorias: estado.categorias.map((c) => (c.id === actualizada.id ? actualizada : c)),
-          jugadores,
-        },
-        entorno,
-        "Actualización de categoría",
-        cambios > 0
-          ? `${actualizada.nombre} — ${cambios} jugador(es) cambiaron de estado de elegibilidad`
-          : actualizada.nombre,
-        { categoriaId: actualizada.id }
-      );
-    }
-
-    case "cerrarRegistroCategoria": {
-      const siguiente: SimuladorState = {
-        ...estado,
-        categorias: estado.categorias.map((c) =>
-          c.id === accion.categoriaId
-            ? {
-                ...c,
-                registroCerrado: true,
-                fechaCierreRegistro: accion.fecha,
-                ventanaExtemporanea: undefined,
-              }
-            : c
-        ),
-      };
-      return conBitacora(
-        siguiente,
-        entorno,
-        "Cierre de registro de categoría",
-        `${nombreCategoria(estado, accion.categoriaId)} — congelado al ${accion.fecha}`,
-        { categoriaId: accion.categoriaId }
-      );
-    }
-
-    case "abrirVentanaExtemporanea": {
-      const siguiente: SimuladorState = {
-        ...estado,
-        categorias: estado.categorias.map((c) =>
-          c.id === accion.categoriaId
-            ? {
-                ...c,
-                ventanaExtemporanea: {
-                  abiertaEl: hoy,
-                  hasta: accion.hasta,
-                  motivo: accion.motivo.trim(),
-                },
-              }
-            : c
-        ),
-      };
-      return conBitacora(
-        siguiente,
-        entorno,
-        "Apertura de ventana de altas extemporáneas",
-        `${nombreCategoria(estado, accion.categoriaId)} — hasta el ${accion.hasta}: ${accion.motivo.trim()}`,
-        { categoriaId: accion.categoriaId }
-      );
-    }
-
-    case "cerrarVentanaExtemporanea": {
-      const siguiente: SimuladorState = {
-        ...estado,
-        categorias: estado.categorias.map((c) =>
-          c.id === accion.categoriaId ? { ...c, ventanaExtemporanea: undefined } : c
-        ),
-      };
-      return conBitacora(
-        siguiente,
-        entorno,
-        "Cierre de ventana de altas extemporáneas",
-        nombreCategoria(estado, accion.categoriaId),
-        { categoriaId: accion.categoriaId }
-      );
-    }
-
-    case "crearEquipo": {
-      const { datos } = accion;
-      const nuevo = {
-        id: entorno.crearId("equipo"),
-        categoriaId: datos.categoriaId,
-        nombre: datos.nombre.trim(),
-        delegado: { nombre: datos.delegado.nombre.trim(), telefono: datos.delegado.telefono.trim() },
-      };
-      return conBitacora(
-        { ...estado, equipos: [...estado.equipos, nuevo] },
-        entorno,
-        "Registro de equipo",
-        `${nuevo.nombre} — ${nombreCategoria(estado, nuevo.categoriaId)}`,
-        { equipoId: nuevo.id, categoriaId: nuevo.categoriaId }
-      );
-    }
-
-    case "crearJugador": {
-      const { datos } = accion;
-      const equipo = estado.equipos.find((e) => e.id === datos.equipoId)!;
-      const categoria = estado.categorias.find((c) => c.id === equipo.categoriaId)!;
-      const curp = datos.curp.trim().toUpperCase();
-      const { estado: estadoElegibilidad, motivoRevision } = calcularElegibilidad(
-        datos.fechaNacimiento,
-        curp,
-        categoria
-      );
-      const extemporanea = estadoRegistro(categoria, hoy) === "extemporaneo";
-      const menor = esMenorDeEdad(datos.fechaNacimiento, entorno.ahora);
-
-      const nuevo: Jugador = {
-        id: entorno.crearId("jugador"),
-        equipoId: equipo.id,
-        nombreCompleto: datos.nombreCompleto.trim(),
-        fechaNacimiento: datos.fechaNacimiento,
-        curp,
-        numero: datos.numero,
-        fotoUrl: datos.fotoUrl,
-        estadoElegibilidad,
-        motivoRevision,
-        tutor: menor && datos.tutor ? { ...datos.tutor, fecha: entorno.ahora.toISOString() } : undefined,
-        ...(extemporanea && { altaExtemporanea: true }),
-      };
-
-      return conBitacora(
-        { ...estado, jugadores: [...estado.jugadores, nuevo] },
-        entorno,
-        extemporanea ? "Inscripción extemporánea de jugador" : "Inscripción de jugador",
-        `${nuevo.nombreCompleto} — ${equipo.nombre} (${estadoElegibilidad})${
-          nuevo.tutor
-            ? ` · consentimiento del tutor v${nuevo.tutor.versionAviso ?? "1.0"}; nombre público: ${nuevo.tutor.publicarNombre ? "sí" : "no, solo dorsal"}`
-            : ""
-        }`,
-        { jugadorId: nuevo.id, equipoId: equipo.id }
-      );
-    }
-
-    case "establecerOverrideAdmin": {
-      const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId)!;
-      return conBitacora(
-        {
-          ...estado,
-          jugadores: estado.jugadores.map((j) =>
-            j.id === accion.jugadorId ? { ...j, overrideAdmin: accion.override } : j
-          ),
-        },
-        entorno,
-        "Anulación manual de elegibilidad",
-        accion.override
-          ? `${jugador.nombreCompleto} — ${accion.override.motivo}`
-          : `${jugador.nombreCompleto} — anulación retirada`,
-        { jugadorId: jugador.id, equipoId: jugador.equipoId }
-      );
-    }
-
-    case "generarCalendario": {
-      const equipoIds = estado.equipos
-        .filter((e) => e.categoriaId === accion.categoriaId)
-        .map((e) => e.id);
-      const conservados = estado.partidos.filter(
-        (p) => p.categoriaId !== accion.categoriaId || p.estado !== "programado"
-      );
-      const nuevos = generarCalendarioRoundRobin({
-        categoriaId: accion.categoriaId,
-        equipoIds,
-        ...accion.opciones,
-        crearId: () => entorno.crearId("partido"),
-      });
-      return conBitacora(
-        { ...estado, partidos: [...conservados, ...nuevos] },
-        entorno,
-        "Generación de calendario",
-        `${nombreCategoria(estado, accion.categoriaId)} — ${nuevos.length} partido(s)`,
-        { categoriaId: accion.categoriaId }
-      );
-    }
-
-    case "actualizarConvocados": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const anteriores = convocadosDelLado(partido, accion.lado);
-      const convocados = Array.from(new Set(accion.jugadorIds));
-      // Keep starters still called up, then promote new call-ups to starters
-      // until the starting eleven is full.
-      const titulares = titularesDelLado(partido, accion.lado).filter((id) =>
-        convocados.includes(id)
-      );
-      for (const id of convocados) {
-        if (!anteriores.includes(id) && titulares.length < MAX_TITULARES) titulares.push(id);
-      }
-      const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
-      return conBitacora(
-        conPartido(estado, partido.id, (p) => conLado(p, accion.lado, { convocados, titulares })),
-        entorno,
-        "Actualización de convocados",
-        `${nombreEquipo(estado, equipoId)} — ${convocados.length} convocado(s), ${titulares.length} titular(es)`,
-        { partidoId: partido.id, equipoId }
-      );
-    }
-
-    case "alternarTitular": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const actuales = titularesDelLado(partido, accion.lado);
-      const titulares = actuales.includes(accion.jugadorId)
-        ? actuales.filter((id) => id !== accion.jugadorId)
-        : [...actuales, accion.jugadorId];
-      return conPartido(estado, partido.id, (p) => conLado(p, accion.lado, { titulares }));
-    }
-
-    case "iniciarPartido": {
-      const siguiente = conMesa(
-        conPartido(estado, accion.partidoId, (p) => ({ ...p, estado: "en_curso" })),
-        accion.partidoId,
-        (mesa) => ({ ...mesa, minutoBase: 0, cronometroDesde: ahoraMs })
-      );
-      return conBitacora(siguiente, entorno, "Inicio de partido", undefined, {
-        partidoId: accion.partidoId,
-      });
-    }
-
-    case "alternarCronometro":
-      return conMesa(estado, accion.partidoId, (mesa) =>
-        mesa.cronometroDesde === null
-          ? reanudarCronometro(mesa, ahoraMs)
-          : pausarCronometro(mesa, ahoraMs)
-      );
-
-    case "ajustarMinuto":
-      return conMesa(estado, accion.partidoId, (mesa) => ajustarMinuto(mesa, accion.delta, ahoraMs));
-
-    case "agregarEvento": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const evento: EventoPartido = {
-        ...accion.evento,
-        id: entorno.crearId("evento"),
-        partidoId: partido.id,
-      };
-      return conBitacora(
-        conPartido(estado, partido.id, (p) => conEventos(p, [...p.eventos, evento])),
-        entorno,
-        "Registro de evento de partido",
-        describirEvento(estado, evento) + (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
-        { partidoId: partido.id, jugadorId: evento.jugadorId }
-      );
-    }
-
-    case "eliminarEvento": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const evento = partido.eventos.find((e) => e.id === accion.eventoId)!;
-      return conBitacora(
-        conPartido(estado, partido.id, (p) =>
-          conEventos(
-            p,
-            p.eventos.filter((e) => e.id !== accion.eventoId)
-          )
-        ),
-        entorno,
-        "Eliminación de evento de partido",
-        describirEvento(estado, evento) + (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
-        { partidoId: partido.id, jugadorId: evento.jugadorId }
-      );
-    }
-
-    case "establecerModoOffline":
-      return conMesa(estado, accion.partidoId, (mesa) => ({ ...mesa, modoOffline: accion.activo }));
-
-    case "encolarEventoOffline": {
-      const pendiente: EventoPartido = {
-        ...accion.evento,
-        id: entorno.crearId("pendiente"),
-        partidoId: accion.partidoId,
-        registradoOffline: true,
-      };
-      return conMesa(estado, accion.partidoId, (mesa) => ({
-        ...mesa,
-        colaPendiente: [...mesa.colaPendiente, pendiente],
-      }));
-    }
-
-    case "descartarEventoOffline":
-      return conMesa(estado, accion.partidoId, (mesa) => ({
-        ...mesa,
-        colaPendiente: mesa.colaPendiente.filter((e) => e.id !== accion.eventoId),
-      }));
-
-    case "sincronizarColaOffline": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const cola = obtenerMesa(estado.mesas, partido.id).colaPendiente;
-      const sinCola = conMesa(estado, partido.id, (mesa) => ({
-        ...mesa,
-        colaPendiente: [],
-        modoOffline: false,
-      }));
-      if (cola.length === 0) return sinCola;
-      const sincronizados = cola.map((e) => ({
-        ...e,
-        id: entorno.crearId("evento"),
-        registradoOffline: true,
-      }));
-      return conBitacora(
-        conPartido(sinCola, partido.id, (p) => conEventos(p, [...p.eventos, ...sincronizados])),
-        entorno,
-        "Sincronización de eventos capturados sin conexión",
-        `${sincronizados.length} evento(s)` +
-          (habiaConfirmaciones(partido) ? AVISO_CONFIRMACIONES : ""),
-        { partidoId: partido.id }
-      );
-    }
-
-    case "establecerConfirmacion": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
-      return conBitacora(
-        conPartido(estado, partido.id, (p) =>
-          accion.lado === "local"
-            ? { ...p, confirmacionDelegadoLocal: accion.confirmado }
-            : { ...p, confirmacionDelegadoVisitante: accion.confirmado }
-        ),
-        entorno,
-        accion.confirmado ? "Confirmación de delegado" : "Confirmación de delegado retirada",
-        `${nombreEquipo(estado, equipoId)} (${ETIQUETA_LADO[accion.lado]})`,
-        { partidoId: partido.id, equipoId }
-      );
-    }
-
-    case "registrarProtesta": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
-      const protesta = { motivo: accion.motivo.trim(), fecha: entorno.ahora.toISOString() };
-      return conBitacora(
-        conPartido(estado, partido.id, (p) =>
-          accion.lado === "local"
-            ? { ...p, protestaLocal: protesta, confirmacionDelegadoLocal: false }
-            : { ...p, protestaVisitante: protesta, confirmacionDelegadoVisitante: false }
-        ),
-        entorno,
-        "Protesta de delegado",
-        `${nombreEquipo(estado, equipoId)}: ${protesta.motivo}`,
-        { partidoId: partido.id, equipoId }
-      );
-    }
-
-    case "retirarProtesta": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
-      return conBitacora(
-        conPartido(estado, partido.id, (p) =>
-          accion.lado === "local"
-            ? { ...p, protestaLocal: undefined }
-            : { ...p, protestaVisitante: undefined }
-        ),
-        entorno,
-        "Protesta retirada",
-        nombreEquipo(estado, equipoId),
-        { partidoId: partido.id, equipoId }
-      );
-    }
-
-    case "cerrarActa": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const siguiente = conMesa(
-        conPartido(estado, partido.id, (p) => ({ ...p, actaCerrada: true, estado: "finalizado" })),
-        partido.id,
-        (mesa) => pausarCronometro(mesa, ahoraMs)
-      );
-      const conProtesta = partido.protestaLocal || partido.protestaVisitante;
-      return conBitacora(
-        siguiente,
-        entorno,
-        conProtesta ? "Cierre de acta con protesta" : "Cierre de acta",
-        `${nombreEquipo(estado, partido.equipoLocalId)} ${partido.golesLocal} - ${partido.golesVisitante} ${nombreEquipo(estado, partido.equipoVisitanteId)}`,
-        { partidoId: partido.id }
-      );
-    }
-
-    case "resolverProtesta": {
-      const partido = buscarPartido(estado, accion.partidoId);
-      const resolucion = { texto: accion.texto.trim(), fecha: entorno.ahora.toISOString() };
-      const equipoId = accion.lado === "local" ? partido.equipoLocalId : partido.equipoVisitanteId;
-      return conBitacora(
-        conPartido(estado, partido.id, (p) =>
-          accion.lado === "local"
-            ? { ...p, protestaLocal: { ...p.protestaLocal!, resolucion } }
-            : { ...p, protestaVisitante: { ...p.protestaVisitante!, resolucion } }
-        ),
-        entorno,
-        "Resolución de protesta",
-        `${nombreEquipo(estado, equipoId)}: ${resolucion.texto}`,
-        { partidoId: partido.id, equipoId }
-      );
-    }
-
-    // --- Legal compliance ---------------------------------------------------
-    case "aceptarTerminos": {
-      const aceptacion: AceptacionTerminos = {
-        ...accion.aceptacion,
-        nombre: accion.aceptacion.nombre.trim(),
-        correo: accion.aceptacion.correo.trim(),
-        id: entorno.crearId("aceptacion"),
-        fecha: entorno.ahora.toISOString(),
-      };
-      return conBitacora(
-        { ...estado, legal: { ...estado.legal, aceptaciones: [...estado.legal.aceptaciones, aceptacion] } },
-        entorno,
-        `Aceptación de Términos de uso v${aceptacion.versionTerminos}`,
-        `${aceptacion.nombre} (${aceptacion.correo}) — huella ${aceptacion.huellaTerminos.slice(0, 12)}… · aviso v${aceptacion.versionAviso} mostrado`
-      );
-    }
-
-    case "registrarConstancia": {
-      const c = accion.constancia;
-      return conBitacora(
-        {
-          ...estado,
-          legal: {
-            ...estado.legal,
-            constancias: [...estado.legal.constancias, c],
-            licencia: { ...estado.legal.licencia, estado: "activa", folioConstanciaVigente: c.folio, cancelacion: undefined },
-          },
-        },
-        entorno,
-        `Aceptación de Condiciones de Uso y Licencia v${c.version}`,
-        `Folio ${c.folio} — ${c.representante} (${c.cargo}) · código verificado · huella ${c.huellaTexto.slice(0, 12)}…`
-      );
-    }
-
-    case "cancelarPlan": {
-      const cancelacion = {
-        solicitadaEl: entorno.ahora.toISOString(),
-        motivo: accion.motivo,
-        detalle: accion.detalle?.trim() || undefined,
-        efectivaEl: accion.efectivaEl,
-        solicitadaPor: estado.legal.administrador.nombre,
-      };
-      return conBitacora(
-        {
-          ...estado,
-          legal: {
-            ...estado.legal,
-            licencia: { ...estado.legal.licencia, estado: "cancelacion_programada", cancelacion },
-          },
-        },
-        entorno,
-        "Cancelación del plan (aviso de no renovación)",
-        `El servicio termina el ${accion.efectivaEl}; después se entregan y suprimen los datos de la liga`
-      );
-    }
-
-    case "revertirCancelacionPlan":
-      return conBitacora(
-        {
-          ...estado,
-          legal: { ...estado.legal, licencia: { ...estado.legal.licencia, estado: "activa", cancelacion: undefined } },
-        },
-        entorno,
-        "Reversión de la cancelación del plan",
-        "La licencia vuelve a renovarse automáticamente"
-      );
-
-    case "registrarDescargaDatos":
-      return conBitacora(estado, entorno, "Exportación de los datos de la liga", `Formato ${accion.formato} (portabilidad)`);
-
-    case "crearSolicitudArco": {
-      const anio = entorno.ahora.getFullYear();
-      const folio = `ARCO-${anio}-${String(estado.legal.solicitudesArco.length + 1).padStart(4, "0")}`;
-      const solicitud: SolicitudArco = {
-        folio,
-        ...accion.solicitud,
-        descripcion: accion.solicitud.descripcion.trim(),
-        medio: accion.solicitud.medio.trim(),
-        fecha: entorno.ahora.toISOString(),
-        venceEl: sumarDiasHabiles(hoy, 20),
-        turnarAntesDe: sumarDiasHabiles(hoy, 2),
-        estado: "recibida",
-      };
-      return conBitacora(
-        { ...estado, legal: { ...estado.legal, solicitudesArco: [...estado.legal.solicitudesArco, solicitud] } },
-        entorno,
-        `Solicitud ARCO recibida (${solicitud.tipo})`,
-        `Folio ${folio} — ${solicitud.nombre}; vence el ${solicitud.venceEl}`
-      );
-    }
-
-    case "turnarSolicitudArco":
-      return conBitacora(
-        {
-          ...estado,
-          legal: {
-            ...estado.legal,
-            solicitudesArco: estado.legal.solicitudesArco.map((s) =>
-              s.folio === accion.folio ? { ...s, estado: "turnada", turnadaEl: entorno.ahora.toISOString() } : s
-            ),
-          },
-        },
-        entorno,
-        "Solicitud ARCO turnada a la Unidad de Transparencia",
-        `Folio ${accion.folio}`
-      );
-
-    case "cambiarPublicacionNombre": {
-      const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId)!;
-      return conBitacora(
-        {
-          ...estado,
-          jugadores: estado.jugadores.map((j) =>
-            j.id === jugador.id ? { ...j, tutor: { ...j.tutor!, publicarNombre: accion.publicar } } : j
-          ),
-        },
-        entorno,
-        accion.publicar ? "Consentimiento 2 otorgado (nombre público)" : "Consentimiento 2 revocado (solo dorsal)",
-        `${jugador.nombreCompleto} — por su tutor ${jugador.tutor!.nombre}`,
-        { jugadorId: jugador.id, equipoId: jugador.equipoId }
-      );
-    }
-  }
+  const momento: Momento = { ahoraMs: entorno.ahora.getTime(), hoy: fechaISOLocal(entorno.ahora) };
+  const manejador = MANEJADORES[accion.tipo] as Manejador<AccionSimulador["tipo"]>;
+  return manejador(estado, accion as never, entorno, momento);
 }
