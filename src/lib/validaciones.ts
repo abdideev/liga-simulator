@@ -204,10 +204,10 @@ export function validarAccion(
       if (!numero.ok) return numero;
       if (
         esMenorDeEdad(datos.fechaNacimiento, entorno.ahora) &&
-        (!datos.tutor?.consentimiento || !datos.tutor.nombre.trim())
+        (!datos.tutor?.consentimiento || !datos.tutor.nombre.trim() || !datos.tutor.declaracion)
       ) {
         return error(
-          "Para jugadores menores de edad se requiere el nombre del tutor y su consentimiento"
+          "Para jugadores menores de edad se requieren el nombre del tutor, su declaración de patria potestad y el consentimiento 1"
         );
       }
       return OK;
@@ -402,6 +402,72 @@ export function validarAccion(
       if (!protesta) return error("No hay protesta registrada");
       if (protesta.resolucion) return error("La protesta ya fue resuelta");
       if (!accion.texto.trim()) return error("Describe la resolución");
+      return OK;
+    }
+
+    // --- Legal compliance ---------------------------------------------------
+    case "aceptarTerminos": {
+      const a = accion.aceptacion;
+      if (rol === "publico") return SIN_PERMISO;
+      if (!a.nombre.trim() || !a.correo.trim()) return error("Nombre y correo son obligatorios");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.correo.trim())) return error("Escribe un correo válido");
+      if (!a.huellaTerminos || !a.huellaAviso) return error("Aún se calcula la huella del texto; intenta de nuevo");
+      if (a.casillas.length < 2) return error("Debes aceptar los Términos de uso y confirmar que leíste el aviso");
+      return OK;
+    }
+
+    case "registrarConstancia": {
+      if (!esAdmin) return SIN_PERMISO;
+      const c = accion.constancia;
+      if (estado.legal.constancias.some((x) => x.folio === c.folio)) return error("El folio ya existe");
+      if (c.casillas.length < 2) return error("Faltan casillas por aceptar");
+      if (!c.huellaTexto || !c.huellaConstancia) return error("Falta la huella digital");
+      return OK;
+    }
+
+    case "cancelarPlan": {
+      if (!esAdmin) return SIN_PERMISO;
+      if (estado.legal.licencia.estado !== "activa") {
+        return error("Solo se puede cancelar un plan activo");
+      }
+      if (!accion.efectivaEl) return error("No hay fin de temporada para programar la cancelación");
+      if (accion.motivo === "otro" && !accion.detalle?.trim()) return error("Describe el motivo");
+      return OK;
+    }
+
+    case "revertirCancelacionPlan":
+      if (!esAdmin) return SIN_PERMISO;
+      return estado.legal.licencia.estado === "cancelacion_programada"
+        ? OK
+        : error("No hay una cancelación programada");
+
+    case "registrarDescargaDatos":
+      return esAdmin ? OK : SIN_PERMISO;
+
+    case "crearSolicitudArco": {
+      if (rol === "publico") return SIN_PERMISO;
+      if (accion.solicitud.descripcion.trim().length < 10) {
+        return error("Describe tu solicitud (al menos 10 caracteres)");
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accion.solicitud.medio.trim())) {
+        return error("Escribe un correo válido para recibir la respuesta");
+      }
+      return OK;
+    }
+
+    case "turnarSolicitudArco": {
+      if (!esAdmin) return SIN_PERMISO;
+      const s = estado.legal.solicitudesArco.find((x) => x.folio === accion.folio);
+      if (!s) return error("Solicitud no encontrada");
+      if (s.estado !== "recibida") return error("La solicitud ya fue turnada");
+      return OK;
+    }
+
+    case "cambiarPublicacionNombre": {
+      const jugador = estado.jugadores.find((j) => j.id === accion.jugadorId);
+      if (!jugador) return error("Jugador no encontrado");
+      if (!puedeInscribirEn(rol, equipoDelegadoId, jugador.equipoId)) return SIN_PERMISO;
+      if (!jugador.tutor) return error("Solo aplica a jugadores menores de edad");
       return OK;
     }
   }

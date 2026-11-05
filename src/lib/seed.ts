@@ -173,6 +173,11 @@ function crearJugador(
             APELLIDOS[(spec.numero * 2 + 3) % APELLIDOS.length]
           }`,
           consentimiento: true,
+          declaracion: true,
+          parentesco: spec.numero % 3 === 0 ? "padre" : spec.numero % 3 === 1 ? "madre" : "tutor",
+          // Consent 2 (public name) is optional: some tutors grant it, most do not.
+          publicarNombre: spec.numero % 4 === 0,
+          versionAviso: "1.0",
         }
       : undefined,
   };
@@ -475,5 +480,18 @@ export function crearEstadoInicial(
     rolActual: "administrador",
     equipoDelegadoId: equipos[0].id,
     mesas: {},
+    legal: {
+      // Fictitious person and address: the real ones are set by the Municipio.
+      administrador: {
+        nombre: "Mariana Ortiz Lara",
+        cargo: "Enlace municipal de la Liga",
+        correo: "enlace.liga@correo-ejemplo.mx",
+        entidad: "Municipio de Tulancingo de Bravo, Hidalgo",
+      },
+      aceptaciones: [],
+      constancias: [],
+      licencia: { estado: "pendiente", precioPorEquipo: 500, tasaIva: 0.16 },
+      solicitudesArco: [],
+    },
   };
 }

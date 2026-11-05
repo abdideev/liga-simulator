@@ -3,7 +3,10 @@ import {
   Calendar,
   Eye,
   Flag,
+  FilePen,
   Home,
+  ShieldCheck,
+  UserCog,
   Lock,
   ScrollText,
   SlidersHorizontal,
@@ -22,4 +25,7 @@ export const ICONO_SECCION = {
   estadisticas: BarChart3,
   publico: Eye,
   bitacora: ScrollText,
+  privacidad: ShieldCheck,
+  cuenta: UserCog,
+  licencia: FilePen,
 } satisfies Record<string, LucideIcon>;

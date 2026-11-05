@@ -64,9 +64,20 @@ export interface OverrideAdmin {
   fecha: string; // ISO datetime
 }
 
+export type Parentesco = "madre" | "padre" | "tutor";
+
 export interface TutorInfo {
   nombre: string;
+  /** Consentimiento 1: treatment needed to play (mandatory to enroll). */
   consentimiento: boolean;
+  parentesco?: Parentesco;
+  /** Sworn statement that the person holds parental authority or guardianship. */
+  declaracion?: boolean;
+  /** Consentimiento 2 (optional): show the minor's name in the public view. Default: shirt number only. */
+  publicarNombre?: boolean;
+  /** Version of the privacy notice and consent texts shown when consenting. */
+  versionAviso?: string;
+  fecha?: string; // ISO datetime of the consent
 }
 
 export interface Jugador {
@@ -174,6 +185,101 @@ export interface BitacoraEntry {
   referencias?: ReferenciasBitacora;
 }
 
+// ---------------------------------------------------------------------------
+// Legal compliance (Entregable 8)
+// ---------------------------------------------------------------------------
+
+/** Person behind the simulated role: the league admin or one team delegate. */
+export interface UsuarioSimulado {
+  clave: string; // "admin" | "delegado:<equipoId>"
+  nombre: string;
+  correo: string;
+  rol: RolSimulado;
+  cargo?: string;
+}
+
+/** Capa 3: a user's acceptance of the Términos de uso at first sign-in. */
+export interface AceptacionTerminos {
+  id: string;
+  usuario: string; // UsuarioSimulado.clave
+  nombre: string;
+  correo: string;
+  rol: RolSimulado;
+  versionTerminos: string;
+  huellaTerminos: string; // SHA-256 of the exact text
+  versionAviso: string;
+  huellaAviso: string; // notice shown before registering
+  casillas: string[]; // exact texts of the boxes that were checked
+  fecha: string; // ISO datetime
+  dispositivo: string;
+}
+
+/** Capa 2 evidence (Anexo D): generated when the client's representative accepts the Condiciones. */
+export interface ConstanciaAceptacion {
+  folio: string; // ACE-2026-000001
+  documento: string;
+  version: string;
+  huellaTexto: string;
+  cliente: string;
+  representante: string;
+  cargo: string;
+  correo: string;
+  casillas: string[];
+  codigoEnviadoEl: string; // ISO datetime
+  codigoConfirmadoEl: string; // ISO datetime
+  recibidaEl: string; // ISO datetime: perfeccionamiento (CCom art. 80)
+  ip: string;
+  dispositivo: string;
+  versionAviso: string;
+  huellaConstancia: string; // SHA-256 of all the fields above
+}
+
+export type EstadoLicencia = "pendiente" | "activa" | "cancelacion_programada";
+
+export type MotivoCancelacion = "costo" | "otro_sistema" | "fin_liga" | "insatisfecho" | "otro";
+
+export interface CancelacionPlan {
+  solicitadaEl: string; // ISO datetime
+  motivo: MotivoCancelacion;
+  detalle?: string;
+  efectivaEl: string; // ISO date: end of the current season
+  solicitadaPor: string; // nombre del representante
+}
+
+export interface Licencia {
+  estado: EstadoLicencia;
+  precioPorEquipo: number; // MXN, before VAT
+  tasaIva: number; // 0.16
+  folioConstanciaVigente?: string;
+  cancelacion?: CancelacionPlan;
+}
+
+export type TipoArco = "acceso" | "rectificacion" | "cancelacion" | "oposicion" | "revocacion";
+
+export type EstadoArco = "recibida" | "turnada" | "respondida";
+
+export interface SolicitudArco {
+  folio: string; // ARCO-2026-0001
+  tipo: TipoArco;
+  usuario: string;
+  nombre: string;
+  descripcion: string;
+  medio: string; // response channel (email)
+  fecha: string; // ISO datetime
+  venceEl: string; // ISO date: 20 business days
+  turnarAntesDe: string; // ISO date: 2 business days (A&I → Unidad de Transparencia)
+  estado: EstadoArco;
+  turnadaEl?: string;
+}
+
+export interface EstadoLegal {
+  administrador: { nombre: string; cargo: string; correo: string; entidad: string };
+  aceptaciones: AceptacionTerminos[];
+  constancias: ConstanciaAceptacion[];
+  licencia: Licencia;
+  solicitudesArco: SolicitudArco[];
+}
+
 export interface SimuladorState {
   liga: Liga;
   temporadas: Temporada[];
@@ -186,6 +292,7 @@ export interface SimuladorState {
   /** Team the simulated delegate represents; only meaningful when rolActual is "delegado". */
   equipoDelegadoId: string | null;
   mesas: Record<string, EstadoMesa>;
+  legal: EstadoLegal;
 }
 
 export interface EstadisticaJugador {

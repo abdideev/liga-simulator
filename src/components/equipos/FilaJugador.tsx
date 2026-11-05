@@ -46,6 +46,11 @@ export default function FilaJugador({
           <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
             {edad} años
             {menor && <span>· Menor de edad</span>}
+            {menor && jugador.tutor && (
+              <span data-testid={`publicacion-${jugador.id}`}>
+                · {jugador.tutor.publicarNombre ? "Nombre público (tutor)" : "En público: solo dorsal"}
+              </span>
+            )}
             {jugador.altaExtemporanea && <span>· Alta extemporánea</span>}
           </p>
         </div>
